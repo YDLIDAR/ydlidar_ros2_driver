@@ -157,8 +157,27 @@ int main(int argc, char *argv[]) {
     RCLCPP_ERROR(node->get_logger(), "%s\n", laser.DescribeError());
   }
   
-
   auto laser_pub = node->create_publisher<sensor_msgs::msg::LaserScan>("scan", rclcpp::SensorDataQoS());
+
+  auto stop_scan_service =
+    [&laser](const std::shared_ptr<rmw_request_id_t> request_header,
+  const std::shared_ptr<std_srvs::srv::Empty::Request> req,
+  std::shared_ptr<std_srvs::srv::Empty::Response> response) -> bool
+  {
+    return laser.turnOff();
+  };
+
+  auto stop_service = node->create_service<std_srvs::srv::Empty>("stop_scan",stop_scan_service);
+
+  auto start_scan_service =
+    [&laser](const std::shared_ptr<rmw_request_id_t> request_header,
+  const std::shared_ptr<std_srvs::srv::Empty::Request> req,
+  std::shared_ptr<std_srvs::srv::Empty::Response> response) -> bool
+  {
+    return laser.turnOn();
+  };
+
+  auto start_service = node->create_service<std_srvs::srv::Empty>("start_scan",start_scan_service);
 
   rclcpp::WallRate loop_rate(20);
 
