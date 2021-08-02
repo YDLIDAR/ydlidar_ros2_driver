@@ -35,14 +35,24 @@ def generate_launch_description():
                                                share_dir, 'params', 'ydlidar.yaml'),
                                            description='FPath to the ROS2 parameters file to use.')
 
-    driver_node = LifecycleNode(package='ydlidar_ros2_driver',
+    driver_node1 = LifecycleNode(package='ydlidar_ros2_driver',
                                 executable='ydlidar_ros2_driver_node',
-                                name='ydlidar_ros2_driver_node',
+                                name='ydlidar_ros2_driver_node1',
                                 output='screen',
                                 emulate_tty=True,
                                 parameters=[parameter_file],
                                 namespace='/',
                                 )
+
+    driver_node2 = LifecycleNode(package='ydlidar_ros2_driver',
+                                executable='ydlidar_ros2_driver_node',
+                                name='ydlidar_ros2_driver_node2',
+                                output='screen',
+                                emulate_tty=True,
+                                parameters=[parameter_file],
+                                namespace='/',
+                                )
+
     tf2_node = Node(package='tf2_ros',
                     executable='static_transform_publisher',
                     name='static_tf_pub_laser',
@@ -51,6 +61,7 @@ def generate_launch_description():
 
     return LaunchDescription([
         params_declare,
-        driver_node,
+        driver_node1,
+        driver_node2,
         tf2_node,
     ])
