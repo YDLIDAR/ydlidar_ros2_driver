@@ -19,9 +19,7 @@ from launch_ros.actions import LifecycleNode
 from launch_ros.actions import Node
 from launch.actions import DeclareLaunchArgument
 from launch.substitutions import LaunchConfiguration
-from launch.actions import LogInfo
 
-import lifecycle_msgs.msg
 import os
 
 
