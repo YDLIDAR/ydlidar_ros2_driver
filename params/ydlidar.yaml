@@ -10,7 +10,7 @@ lidar1:
       device_type: 0
       sample_rate: 5
       abnormal_check_count: 4
-      resolution_fixed: true
+      fixed_resolution: true
       reversion: true
       inverted: true
       auto_reconnect: true
@@ -38,7 +38,7 @@ lidar2:
       device_type: 0
       sample_rate: 5
       abnormal_check_count: 4
-      resolution_fixed: true
+      fixed_resolution: true
       reversion: true
       inverted: true
       auto_reconnect: true
@@ -53,4 +53,3 @@ lidar2:
       invalid_range_is_inf: false
       scaling_factor: 1.0
       intercept_factor: 0.0
-
