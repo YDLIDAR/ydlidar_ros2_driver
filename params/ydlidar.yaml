@@ -1,7 +1,7 @@
 lidar1:
   ydlidar_ros2_driver_node:
     ros__parameters:
-      port: /dev/ttyUSB_LIDAR_G2_1
+      port: /dev/ttyUSB_LIDAR_G2_2
       frame_id: lidar1_link
       topic: scan
       ignore_array: ""
@@ -20,14 +20,14 @@ lidar1:
       angle_max: 60.0
       angle_min: -210.0
       range_max: 16.0
-      range_min: 0.01
+      range_min: 0.28
       frequency: 10.0
       invalid_range_is_inf: false
 
 lidar2:
   ydlidar_ros2_driver_node:
     ros__parameters:
-      port: /dev/ttyUSB_LIDAR_G2_2
+      port: /dev/ttyUSB_LIDAR_G2_1
       frame_id: lidar2_link
       topic: scan
       ignore_array: ""
@@ -46,7 +46,7 @@ lidar2:
       angle_max: 180.0
       angle_min: -90.0
       range_max: 16.0
-      range_min: 0.01
+      range_min: 0.28
       frequency: 10.0
       invalid_range_is_inf: false
 

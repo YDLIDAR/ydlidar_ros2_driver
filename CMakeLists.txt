@@ -58,20 +58,10 @@ target_link_libraries(${PROJECT_NAME}_node
 #---------------------------------------------------------------------------------------
 add_executable(${PROJECT_NAME}_client
     src/${PROJECT_NAME}_client.cpp)
-add_executable(${PROJECT_NAME}_mixer
-    src/${PROJECT_NAME}_mixer.cpp)
 #---------------------------------------------------------------------------------------
 # link libraries
 #--------------------------------------------------------------------------------------
 ament_target_dependencies(${PROJECT_NAME}_client
-    "rclcpp"
-    "sensor_msgs"
-    "visualization_msgs"
-    "geometry_msgs"
-    "std_srvs"
-    )
-
-ament_target_dependencies(${PROJECT_NAME}_mixer
     "rclcpp"
     "sensor_msgs"
     "visualization_msgs"
@@ -84,10 +74,6 @@ ament_target_dependencies(${PROJECT_NAME}_mixer
 #---------------------------------------------------------------------------------------
 install(TARGETS
     ${PROJECT_NAME}_node ${PROJECT_NAME}_client
-    DESTINATION lib/${PROJECT_NAME})
-
-install(TARGETS
-    ${PROJECT_NAME}_node ${PROJECT_NAME}_mixer
     DESTINATION lib/${PROJECT_NAME})
 
 install(DIRECTORY launch params startup config
