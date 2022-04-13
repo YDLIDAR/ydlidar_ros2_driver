@@ -1,4 +1,4 @@
-﻿/*
+/*
  *  YDLIDAR SYSTEM
  *  YDLIDAR ROS 2 Node
  *
@@ -153,6 +153,9 @@ int main(int argc, char *argv[]) {
   node->declare_parameter("invalid_range_is_inf");
   node->get_parameter("invalid_range_is_inf", invalid_range_is_inf);
 
+  float scaling_factor = 1.0f;
+  node->declare_parameter("scaling_factor");
+  node->get_parameter("scaling_factor", scaling_factor);
 
   bool ret = laser.initialize();
   if (ret) {
@@ -210,8 +213,7 @@ int main(int argc, char *argv[]) {
       for(size_t i=0; i < scan.points.size(); i++) {
         int index = std::ceil((scan.points[i].angle - scan.config.min_angle)/scan.config.angle_increment);
         if(index >=0 && index < size) {
-          //scan_msg->ranges[index] = scan.points[i].range - scan.points[i].range*0.04;
-          scan_msg->ranges[index] = scan.points[i].range;
+          scan_msg->ranges[index] = scan.points[i].range * scaling_factor;
           scan_msg->intensities[index] = scan.points[i].intensity;
         }
       }

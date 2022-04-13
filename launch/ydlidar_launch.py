@@ -43,7 +43,7 @@ def generate_launch_description():
                                 )
 
     driver_node2 = LifecycleNode(package='ydlidar_ros2_driver',
-                                executable='ydlidar_ros2_driver_node2',
+                                executable='ydlidar_ros2_driver_node',
                                 name='ydlidar_ros2_driver_node',
                                 output='screen',
                                 emulate_tty=True,

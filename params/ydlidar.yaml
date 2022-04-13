@@ -23,6 +23,7 @@ lidar1:
       range_min: 0.28
       frequency: 10.0
       invalid_range_is_inf: false
+      scaling_factor: 1.0
 
 lidar2:
   ydlidar_ros2_driver_node:
@@ -49,4 +50,5 @@ lidar2:
       range_min: 0.28
       frequency: 10.0
       invalid_range_is_inf: false
+      scaling_factor: 1.0
 
