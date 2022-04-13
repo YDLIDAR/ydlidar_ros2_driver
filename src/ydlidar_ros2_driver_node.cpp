@@ -217,7 +217,11 @@ int main(int argc, char *argv[]) {
       for(size_t i=0; i < scan.points.size(); i++) {
         int index = std::ceil((scan.points[i].angle - scan.config.min_angle)/scan.config.angle_increment);
         if(index >=0 && index < size) {
-          scan_msg->ranges[index] = intercept_factor + scan.points[i].range * scaling_factor;
+          if (scan.points[i].range > 0.0) {
+            scan_msg->ranges[index] = intercept_factor + scan.points[i].range * scaling_factor;
+          } else {
+            scan_msg->ranges[index] = 0.0;
+          }
           scan_msg->intensities[index] = scan.points[i].intensity;
         }
       }
