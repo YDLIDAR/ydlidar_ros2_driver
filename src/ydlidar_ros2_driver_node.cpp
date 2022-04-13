@@ -157,6 +157,10 @@ int main(int argc, char *argv[]) {
   node->declare_parameter("scaling_factor");
   node->get_parameter("scaling_factor", scaling_factor);
 
+  float intercept_factor = 0.0f;
+  node->declare_parameter("intercept_factor");
+  node->get_parameter("intercept_factor", intercept_factor);
+
   bool ret = laser.initialize();
   if (ret) {
     ret = laser.turnOn();
@@ -213,7 +217,7 @@ int main(int argc, char *argv[]) {
       for(size_t i=0; i < scan.points.size(); i++) {
         int index = std::ceil((scan.points[i].angle - scan.config.min_angle)/scan.config.angle_increment);
         if(index >=0 && index < size) {
-          scan_msg->ranges[index] = scan.points[i].range * scaling_factor;
+          scan_msg->ranges[index] = intercept_factor + scan.points[i].range * scaling_factor;
           scan_msg->intensities[index] = scan.points[i].intensity;
         }
       }
