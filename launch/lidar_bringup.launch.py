@@ -14,13 +14,6 @@ def generate_launch_description():
             os.path.join(ydlidar_dir, 'launch', 'ydlidar_launch.py')),
     )
 
-    mixer_dir = get_package_share_directory('laserscan_mixer')
-    mixer_launch = IncludeLaunchDescription(
-        PythonLaunchDescriptionSource(
-            os.path.join(mixer_dir, 'launch', 'laserscan_mixer_launch.py')),
-    )
-
     return LaunchDescription([
         ydlidar_launch,
-        mixer_launch,
     ])
