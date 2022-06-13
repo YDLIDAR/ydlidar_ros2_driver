@@ -20,7 +20,7 @@ lidar1:
       angle_max: 60.0
       angle_min: -210.0
       range_max: 16.0
-      range_min: 0.28
+      range_min: 0.12
       frequency: 10.0
       invalid_range_is_inf: false
       scaling_factor: 1.0
@@ -48,7 +48,7 @@ lidar2:
       angle_max: 180.0
       angle_min: -90.0
       range_max: 16.0
-      range_min: 0.28
+      range_min: 0.12
       frequency: 10.0
       invalid_range_is_inf: false
       scaling_factor: 1.0
