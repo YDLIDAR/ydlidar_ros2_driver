@@ -17,8 +17,8 @@ lidar1:
       isSingleChannel: false
       intensity: true
       support_motor_dtr: false
-      angle_max: 60.0
-      angle_min: -210.0
+      angle_max: 30.
+      angle_min: -150.
       range_max: 16.0
       range_min: 0.12
       frequency: 10.0
