@@ -57,10 +57,10 @@ int main(int argc, char *argv[]) {
   int optval = node->declare_parameter("baudrate", 230400);
   laser.setlidaropt(LidarPropSerialBaudrate, &optval, sizeof(int));
   /// tof lidar
-  optval = node->declare_parameter("lidar_type", TYPE_TRIANGLE);
+  optval = node->declare_parameter("lidar_type", static_cast<int>(TYPE_TRIANGLE));
   laser.setlidaropt(LidarPropLidarType, &optval, sizeof(int));
   /// device type
-  optval = node->declare_parameter("device_type", YDLIDAR_TYPE_SERIAL);
+  optval = node->declare_parameter("device_type", static_cast<int>(YDLIDAR_TYPE_SERIAL));
   laser.setlidaropt(LidarPropDeviceType, &optval, sizeof(int));
   /// sample rate
   optval = node->declare_parameter("sample_rate", 9);
@@ -89,7 +89,7 @@ int main(int argc, char *argv[]) {
   b_optvalue = node->declare_parameter("intensity", false);
   laser.setlidaropt(LidarPropIntenstiy, &b_optvalue, sizeof(bool));
   /// Motor DTR
-  b_optvalue = node->get_parameter("support_motor_dtr", false);
+  b_optvalue = node->declare_parameter("support_motor_dtr", false);
   laser.setlidaropt(LidarPropSupportMotorDtrCtrl, &b_optvalue, sizeof(bool));
 
   //////////////////////float property/////////////////
