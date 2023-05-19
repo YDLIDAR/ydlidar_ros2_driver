@@ -82,8 +82,13 @@ int main(int argc, char *argv[]) {
   node->declare_parameter("abnormal_check_count");
   node->get_parameter("abnormal_check_count", optval);
   laser.setlidaropt(LidarPropAbnormalCheckCount, &optval, sizeof(int));
-     
 
+  /// Intenstiy bit count
+  optval = 8;
+  node->declare_parameter("intensity_bit");
+  node->get_parameter("intensity_bit", optval);
+  laser.setlidaropt(LidarPropIntenstiyBit, &optval, sizeof(int));
+     
   //////////////////////bool property/////////////////
   /// fixed angle resolution
   bool b_optvalue = false;
