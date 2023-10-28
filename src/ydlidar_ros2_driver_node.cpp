@@ -190,7 +190,7 @@ int main(int argc, char *argv[]) {
 
     LaserScan scan;//
 
-    if (laser.isScanning){
+    if (laser.isScanning()){
       if (laser.doProcessSimple(scan)) {
 
         auto scan_msg = std::make_shared<sensor_msgs::msg::LaserScan>();
