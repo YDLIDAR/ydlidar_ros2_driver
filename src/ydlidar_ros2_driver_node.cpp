@@ -70,9 +70,7 @@ int main(int argc, char *argv[]) {
   laser.setlidaropt(LidarPropAbnormalCheckCount, &optval, sizeof(int));
 
   /// Intenstiy bit count
-  optval = 8;
-  node->declare_parameter("intensity_bit");
-  node->get_parameter("intensity_bit", optval);
+  optval = node->declare_parameter("intensity_bit", 8);
   laser.setlidaropt(LidarPropIntenstiyBit, &optval, sizeof(int));
      
   //////////////////////bool property/////////////////
