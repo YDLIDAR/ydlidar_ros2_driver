@@ -38,10 +38,13 @@ run_command "cd build"
 # run_command "cpack"
 run_command "cd ~/"
 
-# Step 4: Clone YDLidar ROS2 Driver Repository
-run_command "mkdir ~/ydlidar_ws/src"
-run_command "cd ~/ydlidar_ws/src"
-run_command "git clone https://github.com/YDLIDAR/ydlidar_ros2_driver.git"
+# Prompt to choose branch for YDLidar ROS2 Driver
+read -p "Do you want the 'Humble' code? (yes/no): " choice
+if [ "$choice" == "yes" ] || [ "$choice" == "Yes" ] || [ "$choice" == "YES" ]; then
+    run_command "git clone -b humble https://github.com/YDLIDAR/ydlidar_ros2_driver.git"
+else
+    run_command "git clone https://github.com/YDLIDAR/ydlidar_ros2_driver.git"
+fi
 
 # Step 5: Build ROS2 Packages
 run_command "cd ~/ydlidar_ws"
