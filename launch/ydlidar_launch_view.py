@@ -28,26 +28,95 @@ import os
 def generate_launch_description():
     share_dir = get_package_share_directory('ydlidar_ros2_driver')
     rviz_config_file = os.path.join(share_dir, 'config','ydlidar.rviz')
-    parameter_file = LaunchConfiguration('params_file')
+    # parameter_file = LaunchConfiguration('params_file')
     node_name = 'ydlidar_ros2_driver_node'
 
-    params_declare = DeclareLaunchArgument('params_file',
-                                           default_value=os.path.join(
-                                               share_dir, 'params', 'ydlidar.yaml'),
-                                           description='FPath to the ROS2 parameters file to use.')
-
-    driver_node = LifecycleNode(package='ydlidar_ros2_driver',
+    backright_node = LifecycleNode(package='ydlidar_ros2_driver',
                                 executable='ydlidar_ros2_driver_node',
-                                name='ydlidar_ros2_driver_node',
+                                name='gole_lidar_node',
                                 output='screen',
                                 emulate_tty=True,
-                                parameters=[parameter_file],
-                                namespace='/',
+                                parameters=[
+                                            {"port": f"/dev/ttyLIDARBR", "frame_id": f"lidar_RR", "ignore_array": ""},
+                                            {"baudrate": 512000, "lidar_type": 1, "device_type": 0, "sample_rate": 6, "abnormal_check_count": 4,
+                                            "intensity_bit": 8},
+                                            {"resolution_fixed": False, "auto_reconnect": True, "reversion": True, "inverted": True,
+                                            "isSingleChannel": False, "intensity": False, "support_motor_dtr": False,
+                                            "invalid_range_is_inf": False, "point_cloud_preservative": False},
+                                            {"angle_min": -126.0, "angle_max": 126.0, "range_min": 0.1, "range_max": 15.0, "frequency": 12.0},
+                                        ],
+                                namespace='/backright',
                                 )
-    tf2_node = Node(package='tf2_ros',
+    
+    backleft_node = LifecycleNode(package='ydlidar_ros2_driver',
+                                executable='ydlidar_ros2_driver_node',
+                                name='gole_lidar_node',
+                                output='screen',
+                                emulate_tty=True,
+                                parameters=[
+                                            {"port": f"/dev/ttyLIDARBL", "frame_id": f"lidar_RL", "ignore_array": ""},
+                                            {"baudrate": 512000, "lidar_type": 1, "device_type": 0, "sample_rate": 6, "abnormal_check_count": 4,
+                                            "intensity_bit": 8},
+                                            {"resolution_fixed": False, "auto_reconnect": True, "reversion": True, "inverted": True,
+                                            "isSingleChannel": False, "intensity": False, "support_motor_dtr": False,
+                                            "invalid_range_is_inf": False, "point_cloud_preservative": False},
+                                            {"angle_min": -126.0, "angle_max": 126.0, "range_min": 0.1, "range_max": 15.0, "frequency": 12.0},
+                                        ],
+                                namespace='/backleft',
+                                )
+    
+    frontleft_node = LifecycleNode(package='ydlidar_ros2_driver',
+                                executable='ydlidar_ros2_driver_node',
+                                name='gole_lidar_node',
+                                output='screen',
+                                emulate_tty=True,
+                                parameters=[
+                                            {"port": f"/dev/ttyLIDARFL", "frame_id": f"lidar_FL", "ignore_array": ""},
+                                            {"baudrate": 512000, "lidar_type": 1, "device_type": 0, "sample_rate": 6, "abnormal_check_count": 4,
+                                            "intensity_bit": 8},
+                                            {"resolution_fixed": False, "auto_reconnect": True, "reversion": True, "inverted": True,
+                                            "isSingleChannel": False, "intensity": False, "support_motor_dtr": False,
+                                            "invalid_range_is_inf": False, "point_cloud_preservative": False},
+                                            {"angle_min": -126.0, "angle_max": 126.0, "range_min": 0.1, "range_max": 15.0, "frequency": 12.0},
+                                        ],
+                                namespace='/frontleft',
+                                )
+    
+    frontright_node = LifecycleNode(package='ydlidar_ros2_driver',
+                                executable='ydlidar_ros2_driver_node',
+                                name='gole_lidar_node',
+                                output='screen',
+                                emulate_tty=True,
+                                parameters=[
+                                            {"port": f"/dev/ttyLIDARFR", "frame_id": f"lidar_FR", "ignore_array": ""},
+                                            {"baudrate": 512000, "lidar_type": 1, "device_type": 0, "sample_rate": 6, "abnormal_check_count": 4,
+                                            "intensity_bit": 8},
+                                            {"resolution_fixed": False, "auto_reconnect": True, "reversion": True, "inverted": True,
+                                            "isSingleChannel": False, "intensity": False, "support_motor_dtr": False,
+                                            "invalid_range_is_inf": False, "point_cloud_preservative": False},
+                                            {"angle_min": -126.0, "angle_max": 126.0, "range_min": 0.1, "range_max": 15.0, "frequency": 12.0},
+                                        ],
+                                namespace='/frontright',
+                                )
+    tf2_lidar_FL_node = Node(package='tf2_ros',
                     executable='static_transform_publisher',
-                    name='static_tf_pub_laser',
-                    arguments=['0', '0', '0.02','0', '0', '0', '1','base_link','laser_frame'],
+                    name='static_tf_pub_lidar_FL',
+                    arguments=['0.442240850568205', '0.352279461646644', '0.134869277594228','0', '0', '0.3826833568853094', '0.9238795637760319','base_link','lidar_FL'],
+                    )
+    tf2_lidar_FR_node = Node(package='tf2_ros',
+                    executable='static_transform_publisher',
+                    name='static_tf_pub_lidar_FR',
+                    arguments=['0.442279461646646', '-0.352240850568205', '0.134869277594215','0', '0', '-0.3826833568853094', '0.9238795637760319','base_link','lidar_FR'],
+                    )
+    tf2_lidar_RL_node = Node(package='tf2_ros',
+                    executable='static_transform_publisher',
+                    name='static_tf_pub_lidar_RL',
+                    arguments=['-0.442279461646646', '0.352240850568202', '0.134869277594224','0', '0', '0.923878673347849', '0.3826855065625277','base_link','lidar_RL'],
+                    )
+    tf2_lidar_RR_node = Node(package='tf2_ros',
+                    executable='static_transform_publisher',
+                    name='static_tf_pub_lidar_RR',
+                    arguments=['-0.442240850568201', '-0.352279461646648', '0.134869277594221','0', '0', '0.923878673347849', '-0.3826855065625277','base_link','lidar_RR'],
                     )
     rviz2_node = Node(package='rviz2',
                     executable='rviz2',
@@ -56,8 +125,13 @@ def generate_launch_description():
                     )
 
     return LaunchDescription([
-        params_declare,
-        driver_node,
-        tf2_node,
+        backright_node,
+        backleft_node,
+        frontright_node,
+        frontleft_node,
+        tf2_lidar_FL_node,
+        tf2_lidar_FR_node,
+        tf2_lidar_RR_node,
+        tf2_lidar_RL_node,
         rviz2_node,
     ])
