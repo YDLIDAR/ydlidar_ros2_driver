@@ -40,7 +40,7 @@ int main(int argc, char *argv[]) {
   RCLCPP_INFO(node->get_logger(), "[YDLIDAR INFO] Current ROS Driver Version: %s\n", ((std::string)ROS2Verision).c_str());
 
   CYdLidar laser;
-  std::string str_optvalue = "/dev/ydlidar";
+  std::string str_optvalue = "/dev/ttyUSB0";
   node->declare_parameter("port", str_optvalue);
   node->get_parameter("port", str_optvalue);
   ///lidar port
@@ -58,7 +58,7 @@ int main(int argc, char *argv[]) {
 
   //////////////////////int property/////////////////
   /// lidar baudrate
-  int optval = 230400;
+  int optval = 512000;
   node->declare_parameter("baudrate", optval);
   node->get_parameter("baudrate", optval);
   laser.setlidaropt(LidarPropSerialBaudrate, &optval, sizeof(int));
@@ -73,7 +73,7 @@ int main(int argc, char *argv[]) {
   node->get_parameter("device_type", optval);
   laser.setlidaropt(LidarPropDeviceType, &optval, sizeof(int));
   /// sample rate
-  optval = 9;
+  optval = 18;
   node->declare_parameter("sample_rate", optval);
   node->get_parameter("sample_rate", optval);
   laser.setlidaropt(LidarPropSampleRate, &optval, sizeof(int));
