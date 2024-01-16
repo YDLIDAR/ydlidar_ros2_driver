@@ -1,0 +1,25 @@
+ydlidar_ros2_driver_node:
+  ros__parameters:
+    port: /dev/ttyUSB0
+    frame_id: laser_frame
+    ignore_array: ""
+    baudrate: 921600
+    lidar_type: 3
+    device_type: 0
+    sample_rate: 9
+    intensity_bit: 0
+    abnormal_check_count: 4
+    fixed_resolution: true
+    reversion: true
+    inverted: true
+    auto_reconnect: true
+    isSingleChannel: false
+    intensity: false
+    support_motor_dtr: false
+    angle_max: 180.0
+    angle_min: -180.0
+    range_max: 1.0
+    range_min: 0.025
+    frequency: 10.0
+    invalid_range_is_inf: false
+
