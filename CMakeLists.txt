@@ -76,7 +76,7 @@ install(TARGETS
     ${PROJECT_NAME}_node ${PROJECT_NAME}_client
     DESTINATION lib/${PROJECT_NAME})
 
-install(DIRECTORY launch params startup config
+install(DIRECTORY launch params startup config urdf meshes
     DESTINATION share/${PROJECT_NAME})
 
 if(BUILD_TESTING)
