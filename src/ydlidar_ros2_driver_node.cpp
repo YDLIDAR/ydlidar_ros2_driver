@@ -154,11 +154,28 @@ int main(int argc, char *argv[]) {
   node->declare_parameter("invalid_range_is_inf");
   node->get_parameter("invalid_range_is_inf", invalid_range_is_inf);
 
-
+  //初始化
   bool ret = laser.initialize();
-  if (ret) {
+  if (ret) 
+  {
+    //设置GS工作模式（非GS雷达请无视该代码）
+    int i_v = 0;
+    node->declare_parameter("m1_mode");
+    node->get_parameter("m1_mode", i_v);
+    laser.setWorkMode(i_v, 0x01);
+    i_v = 0;
+    node->declare_parameter("m2_mode");
+    node->get_parameter("m2_mode", i_v);
+    laser.setWorkMode(i_v, 0x02);
+    i_v = 1;
+    node->declare_parameter("m3_mode");
+    node->get_parameter("m3_mode", i_v);
+    laser.setWorkMode(i_v, 0x04);
+    //启动扫描
     ret = laser.turnOn();
-  } else {
+  } 
+  else 
+  {
     RCLCPP_ERROR(node->get_logger(), "%s\n", laser.DescribeError());
   }
   
@@ -186,12 +203,12 @@ int main(int argc, char *argv[]) {
 
   rclcpp::WallRate loop_rate(20);
 
-  while (ret && rclcpp::ok()) {
-
-    LaserScan scan;//
-
-    if (laser.doProcessSimple(scan)) {
-
+  //std::ofstream file("pointcloud_data.txt"); // 打开文件流
+  while (ret && rclcpp::ok()) 
+  {
+    LaserScan scan;
+    if (laser.doProcessSimple(scan)) 
+    {
       auto scan_msg = std::make_shared<sensor_msgs::msg::LaserScan>();
 
       scan_msg->header.stamp.sec = RCL_NS_TO_S(scan.stamp);
@@ -208,27 +225,29 @@ int main(int argc, char *argv[]) {
       int size = (scan.config.max_angle - scan.config.min_angle)/ scan.config.angle_increment + 1;
       scan_msg->ranges.resize(size);
       scan_msg->intensities.resize(size);
-      for(size_t i=0; i < scan.points.size(); i++) {
+      for (size_t i=0; i < scan.points.size(); i++) 
+      {
+        const auto& p = scan.points.at(i);
         int index = std::ceil((scan.points[i].angle - scan.config.min_angle)/scan.config.angle_increment);
         if(index >=0 && index < size) {
           scan_msg->ranges[index] = scan.points[i].range;
           scan_msg->intensities[index] = scan.points[i].intensity;
         }
+        //file << "i:" << i << ",a:" << p.angle << ",d:" << p.range << ",p:" << p.intensity << std::endl;
       }
-
       laser_pub->publish(*scan_msg);
-
-
-    } else {
+    } 
+    else 
+    {
       RCLCPP_ERROR(node->get_logger(), "Failed to get scan");
     }
-    if(!rclcpp::ok()) {
+    if(!rclcpp::ok()) 
+    {
       break;
     }
     rclcpp::spin_some(node);
     loop_rate.sleep();
   }
-
 
   RCLCPP_INFO(node->get_logger(), "[YDLIDAR INFO] Now YDLIDAR is stopping .......");
   laser.turnOff();
