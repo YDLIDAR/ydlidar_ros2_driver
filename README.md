@@ -3,13 +3,13 @@
 
 ydlidar_ros2_driver is a new ros package, which is designed to gradually become the standard driver package for ydlidar devices in the ros2 environment.
 
-## How to [install ROS2](https://index.ros.org/doc/ros2/Installation)
-[ubuntu](https://index.ros.org/doc/ros2/Installation/Dashing/Linux-Install-Debians/)
+## How to [install ROS2](https://docs.ros.org/en/rolling/Installation.html)
+[ubuntu](https://docs.ros.org/en/rolling/Installation/Ubuntu-Install-Debs.html)
 
-[windows](https://index.ros.org/doc/ros2/Installation/Dashing/Windows-Install-Binary/)
+[windows](https://docs.ros.org/en/rolling/Installation/Windows-Install-Binary.html)
 
 ## How to Create a ROS2 workspace
-[Create a workspace](https://index.ros.org/doc/ros2/Tutorials/Colcon-Tutorial/#create-a-workspace)
+[Create a workspace](https://docs.ros.org/en/rolling/Tutorials/Beginner-Client-Libraries/Colcon-Tutorial.html#create-a-workspace)
 
 
 ## Compile & Install YDLidar SDK
@@ -21,7 +21,7 @@ ydlidar_ros2_driver depends on YDLidar-SDK library. If you have never installed 
 
 ## Clone ydlidar_ros2_driver
 
-1. Clone ydlidar_ros2_driver package for github : 
+1. Clone ydlidar_ros2_driver package for github :
 
    `git clone https://github.com/YDLIDAR/ydlidar_ros2_driver.git ydlidar_ros2_ws/src/ydlidar_ros2_driver`
 
@@ -31,7 +31,7 @@ ydlidar_ros2_driver depends on YDLidar-SDK library. If you have never installed 
    cd ydlidar_ros2_ws
    colcon build --symlink-install
    ```
-   Note: install colcon [see](https://index.ros.org/doc/ros2/Tutorials/Colcon-Tutorial/#install-colcon)
+   Note: install colcon [see](https://docs.ros.org/en/rolling/Tutorials/Beginner-Client-Libraries/Colcon-Tutorial.html#install-colcon)
 
    ![CMAKE Finished](images/finished.png  "CMAKE Finished")
 
