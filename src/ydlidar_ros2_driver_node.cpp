@@ -84,7 +84,7 @@ int main(int argc, char *argv[]) {
   laser.setlidaropt(LidarPropAbnormalCheckCount, &optval, sizeof(int));
 
   /// Intenstiy bit count
-  optval = 8;
+  optval = 0;
   node->declare_parameter("intensity_bit", optval);
   node->get_parameter("intensity_bit", optval);
   laser.setlidaropt(LidarPropIntenstiyBit, &optval, sizeof(int));
@@ -124,6 +124,11 @@ int main(int argc, char *argv[]) {
   node->declare_parameter("support_motor_dtr", b_optvalue);
   node->get_parameter("support_motor_dtr", b_optvalue);
   laser.setlidaropt(LidarPropSupportMotorDtrCtrl, &b_optvalue, sizeof(bool));
+  //是否启用调试
+  b_optvalue = false;
+  node->declare_parameter("debug", b_optvalue);
+  node->get_parameter("debug", b_optvalue);
+  laser.setEnableDebug(b_optvalue);
 
   //////////////////////float property/////////////////
   /// unit: °
@@ -156,9 +161,26 @@ int main(int argc, char *argv[]) {
 
 
   bool ret = laser.initialize();
-  if (ret) {
+  if (ret) 
+  {
+    //设置GS工作模式（非GS雷达请无视该代码）
+    int i_v = 0;
+    node->declare_parameter("m1_mode", i_v);
+    node->get_parameter("m1_mode", i_v);
+    laser.setWorkMode(i_v, 0x01);
+    i_v = 0;
+    node->declare_parameter("m2_mode", i_v);
+    node->get_parameter("m2_mode", i_v);
+    laser.setWorkMode(i_v, 0x02);
+    i_v = 1;
+    node->declare_parameter("m3_mode", i_v);
+    node->get_parameter("m3_mode", i_v);
+    laser.setWorkMode(i_v, 0x04);
+    //启动扫描
     ret = laser.turnOn();
-  } else {
+  } 
+  else 
+  {
     RCLCPP_ERROR(node->get_logger(), "%s\n", laser.DescribeError());
   }
   

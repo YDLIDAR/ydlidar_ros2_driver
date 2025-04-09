@@ -12,18 +12,22 @@ ydlidar_ros2_driver is a new ros package, which is designed to gradually become 
 [Create a workspace](https://index.ros.org/doc/ros2/Tutorials/Colcon-Tutorial/#create-a-workspace)
 
 
-## Compile & Install YDLidar SDK
+## Build & Install YDLidar SDK
 
 ydlidar_ros2_driver depends on YDLidar-SDK library. If you have never installed YDLidar-SDK library or it is out of date, you must first install YDLidar-SDK library. If you have installed the latest version of YDLidar-SDK, skip this step and go to the next step.
 
 1. Download or clone the [YDLIDAR/YDLidar-SDK](https://github.com/YDLIDAR/YDLidar-SDK) repository on GitHub.
 2. Compile and install the YDLidar-SDK under the ***build*** directory following `README.md` of YDLIDAR/YDLidar-SDK.
 
-## Clone ydlidar_ros2_driver
+## Build ydlidar_ros2_driver
 
-1. Clone ydlidar_ros2_driver package for github : 
+1. Clone ydlidar_ros2_driver master branch from github for old version: 
 
    `git clone https://github.com/YDLIDAR/ydlidar_ros2_driver.git ydlidar_ros2_ws/src/ydlidar_ros2_driver`
+
+   Clone ydlidar_ros2_driver humble branch from github for humble,jazzy,etc: 
+
+   `git clone -b humble https://github.com/YDLIDAR/ydlidar_ros2_driver.git ydlidar_ros2_ws/src/ydlidar_ros2_driver`
 
 2. Build ydlidar_ros2_driver package :
 
@@ -46,25 +50,26 @@ ydlidar_ros2_driver depends on YDLidar-SDK library. If you have never installed 
     Note: Add permanent workspace environment variables.
     It's convenientif the ROS2 environment variables are automatically added to your bash session every time a new shell is launched:
     ```
-    $echo "source ~/ydlidar_ros2_ws/install/setup.bash" >> ~/.bashrc
-    $source ~/.bashrc
+    echo "source ~/ydlidar_ros2_ws/install/setup.bash" >> ~/.bashrc
+    source ~/.bashrc
     ```
 4. Confirmation
     To confirm that your package path has been set, printenv the `grep -i ROS` variable.
     ```
-    $ printenv | grep -i ROS
+    printenv | grep -i ROS
     ```
     You should see something similar to:
         `OLDPWD=/home/tony/ydlidar_ros2_ws/install`
 
 5. Create serial port Alias [optional] 
     ```
-	$chmod 0777 src/ydlidar_ros2_driver/startup/*
-	$sudo sh src/ydlidar_ros2_driver/startup/initenv.sh
+    chmod 0777 src/ydlidar_ros2_driver/startup/*
+    sudo sh src/ydlidar_ros2_driver/startup/initenv.sh
     ```
     Note: After completing the previous operation, replug the LiDAR again.
 	
-## Configure LiDAR [paramters](params/ydlidar.yaml)
+## Configure LiDAR [Default parameter file](params/ydlidar.yaml)
+
 ```
 ydlidar_ros2_driver_node:
   ros__parameters:
@@ -74,14 +79,15 @@ ydlidar_ros2_driver_node:
     baudrate: 230400
     lidar_type: 1
     device_type: 0
-    sample_rate: 9
-    abnormal_check_count: 4
-    resolution_fixed: true
-    reversion: true
-    inverted: true
-    auto_reconnect: true
     isSingleChannel: false
     intensity: false
+    intensity_bit: 0
+    sample_rate: 9
+    abnormal_check_count: 4
+    fixed_resolution: true
+    reversion: false
+    inverted: false
+    auto_reconnect: true
     support_motor_dtr: false
     angle_max: 180.0
     angle_min: -180.0
@@ -89,7 +95,9 @@ ydlidar_ros2_driver_node:
     range_min: 0.01
     frequency: 10.0
     invalid_range_is_inf: false
+    debug: false
 ```
+Note: It needs to be modified according to LiDAR actual situation.
 
 ## Run ydlidar_ros2_driver
 
