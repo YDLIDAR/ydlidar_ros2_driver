@@ -11,6 +11,13 @@ ydlidar_ros2_driver is a new ros package, which is designed to gradually become 
 ## How to Create a ROS2 workspace
 [Create a workspace](https://index.ros.org/doc/ros2/Tutorials/Colcon-Tutorial/#create-a-workspace)
 
+# Script Install:
+Open Terminal and execute :
+```
+curl -o install.sh https://raw.githubusercontent.com/cclngit/ydlidar_ros2_driver/master/install.sh
+chmod +x install.sh
+./install.sh
+```
 
 ## Build & Install YDLidar SDK
 
