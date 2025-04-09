@@ -84,7 +84,7 @@ int main(int argc, char *argv[]) {
   laser.setlidaropt(LidarPropAbnormalCheckCount, &optval, sizeof(int));
 
   /// Intenstiy bit count
-  optval = 8;
+  optval = 0;
   node->declare_parameter("intensity_bit");
   node->get_parameter("intensity_bit", optval);
   laser.setlidaropt(LidarPropIntenstiyBit, &optval, sizeof(int));
@@ -124,6 +124,11 @@ int main(int argc, char *argv[]) {
   node->declare_parameter("support_motor_dtr");
   node->get_parameter("support_motor_dtr", b_optvalue);
   laser.setlidaropt(LidarPropSupportMotorDtrCtrl, &b_optvalue, sizeof(bool));
+  //是否启用调试
+  b_optvalue = false;
+  node->declare_parameter("debug");
+  node->get_parameter("debug", b_optvalue);
+  laser.setEnableDebug(b_optvalue);
 
   //////////////////////float property/////////////////
   /// unit: °
