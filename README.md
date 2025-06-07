@@ -96,6 +96,7 @@ ydlidar_ros2_driver_node:
     frequency: 10.0
     invalid_range_is_inf: false
     debug: false
+    fixed_scan_size: true
 ```
 Note: It needs to be modified according to LiDAR actual situation.
 
@@ -169,7 +170,7 @@ The ydlidar_ros2_driver internal parameters are in the launch file, they are lis
 | sample_rate     | int | Set Lidar Sample Rate. <br/>default: `9` |
 | abnormal_check_count     | int | Set the number of abnormal startup data attempts. <br/>default: `4` |
 | fixed_resolution     | bool | Fixed angluar resolution. <br/>default: `true` |
-| reversion     | bool | Reversion LiDAR. <br/>default: `true` |
+| reversion     | bool | Reversion LiDAR. (Lidar's data rotate 180 deg) <br/>default: `true` |
 | inverted     | bool | Inverted LiDAR.<br/>false -- ClockWise.<br/>true -- CounterClockWise  <br/>default: `true` |
 | auto_reconnect     | bool | Automatically reconnect the LiDAR.<br/>true -- hot plug. <br/>default: `true` |
 | isSingleChannel     | bool | Whether LiDAR is a single-channel.<br/>default: `false` |
@@ -181,7 +182,22 @@ The ydlidar_ros2_driver internal parameters are in the launch file, they are lis
 | range_max     | float | Maximum Valid range.<br/>default: `16.0` |
 | frequency     | float | Set Scanning Frequency.<br/>default: `10.0` |
 | invalid_range_is_inf     | bool | Invalid Range is inf.<br/>true -- inf.<br/>false -- 0.0.<br/>default: `false` |
+| fixed_scan_size     | bool | Outputs a fixed scan data size.<br/>default: `true` |
 More paramters details, see [here](details.md)
+
+## Notes about `fixed_scan_size`
+This function will outputs fixed size of scan data, data that is over or under is truncated or filled up, the data size depends on the average of the first 30 scans obtained after the node is activated, which for `slam_toolbox` reduces the chance of data being discarded.  
+  
+NOTE: But if the message like this still occurs and very few data use by the `slam_toolbox`:  
+```
+[async_slam_toolbox_node-9] LaserRangeScan contains 602 range readings, expected 600
+[async_slam_toolbox_node-9] LaserRangeScan contains 602 range readings, expected 600
+[async_slam_toolbox_node-9] LaserRangeScan contains 602 range readings, expected 600
+...
+```
+This means that slam_toolbox captured the scan data at the wrong time, **restart slam_toolbox to solve the problem**.  
+  
+The `slam_toolbox` seems to capture only one of the data in the vary first time as the basis of data size validation, and will be calculated by the formula `max_angle - min_angle / angle_increment + residual` (`residual` in 360 degrees Lidar is `0`, others lidar is `1`), if the data size calculated from the `angle_increment` value happens to be different from the one calculated in this node, it will lead to the problem that most of the data can not be verified, the purpose of adopting the average value in this node is to reduce the chance that the calculated value is different from the value captured by `slam_toolbox`.
 
 ## Contact EAI
 ![Development Path](images/EAI.png)
