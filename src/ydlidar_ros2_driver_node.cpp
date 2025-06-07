@@ -163,6 +163,12 @@ int main(int argc, char *argv[])
   node->declare_parameter("invalid_range_is_inf", invalid_range_is_inf);
   node->get_parameter("invalid_range_is_inf", invalid_range_is_inf);
 
+  // Publisher for LaserScan with updated QoS settings
+  // Refrence by Oyefusi-Samuel's workaround: https://github.com/Oyefusi-Samuel/ydlidar_ros2_driver-master
+  rclcpp::QoS qos(rclcpp::KeepLast(10));  // Keep last 10 messages in the buffer
+  qos.reliable();  // Ensure reliable delivery of messages
+  qos.durability_volatile();  // Volatile durability, meaning no retention of messages after disconnect
+
   bool ret = laser.initialize();
   if (ret)
   {
@@ -187,8 +193,9 @@ int main(int argc, char *argv[])
     RCLCPP_ERROR(node->get_logger(), "%s\n", laser.DescribeError());
   }
 
-  auto laser_pub = node->create_publisher<sensor_msgs::msg::LaserScan>("scan", rclcpp::SensorDataQoS());
-  auto pc_pub = node->create_publisher<sensor_msgs::msg::PointCloud>("point_cloud", rclcpp::SensorDataQoS());
+  // Apply our QoS policy
+  auto laser_pub = node->create_publisher<sensor_msgs::msg::LaserScan>("scan", qos);
+  auto pc_pub = node->create_publisher<sensor_msgs::msg::PointCloud>("point_cloud", qos);
 
   auto stop_scan_service =
       [&laser](const std::shared_ptr<rmw_request_id_t> request_header,
@@ -242,7 +249,6 @@ int main(int argc, char *argv[])
           // (The vaildation value seems like just calculate at first time)
           fixed_scan_size = (scan.config.max_angle - scan.config.min_angle) / (sum_angle_increment / 30);
           RCLCPP_INFO(node->get_logger(), "[YDLIDAR INFO] Fixed scan size = %d", fixed_scan_size);
-          RCLCPP_INFO(node->get_logger(), "[YDLIDAR INFO] Max angle: %f", scan.config.max_angle);
           if (!(f_maxangle == 180.0f && f_minangle == -180.0f)) fixed_scan_size++;
           scan_size_cal_count++;
         }
