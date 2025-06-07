@@ -197,7 +197,8 @@ NOTE: But if the message like this still occurs and very few data use by the `sl
 ```
 This means that slam_toolbox captured the scan data at the wrong time, **restart slam_toolbox to solve the problem**.  
   
-The `slam_toolbox` seems to capture only one of the data in the vary first time as the basis of data size validation, and will be calculated by the formula `max_angle - min_angle / angle_increment + residual` (`residual` in 360 degrees Lidar is `0`, others lidar is `1`), if the data size calculated from the `angle_increment` value happens to be different from the one calculated in this node, it will lead to the problem that most of the data can not be verified.  
+The `slam_toolbox` seems to capture only one of the data in the vary first time as the basis of data size validation, and will be calculated by the formula `max_angle - min_angle / angle_increment + residual` (`residual` in 360 degrees Lidar is `0`, others lidar is `1`), if the data size calculated from the `angle_increment` value to be different from the provided by this node, it will cause the problem that the data can not be verified.  
+(Seems like some lidar's rotation speed not stable, so cause the unstable data count of each rotation).  
 
 ## Contact EAI
 ![Development Path](images/EAI.png)
