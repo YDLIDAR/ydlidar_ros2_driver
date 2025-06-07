@@ -148,7 +148,7 @@ int main(int argc, char *argv[])
   node->get_parameter("support_motor_dtr", b_optvalue);
   laser.setlidaropt(LidarPropSupportMotorDtrCtrl, &b_optvalue, sizeof(bool));
   // Fixed scan size
-  bool b_fixed_scan_size = false;
+  bool b_fixed_scan_size = true;
   node->declare_parameter("fixed_scan_size", b_fixed_scan_size);
   node->get_parameter("fixed_scan_size", b_fixed_scan_size);
   // Enable Debug
