@@ -182,7 +182,7 @@ The ydlidar_ros2_driver internal parameters are in the launch file, they are lis
 | range_max     | float | Maximum Valid range.<br/>default: `16.0` |
 | frequency     | float | Set Scanning Frequency.<br/>default: `10.0` |
 | invalid_range_is_inf     | bool | Invalid Range is inf.<br/>true -- inf.<br/>false -- 0.0.<br/>default: `false` |
-| fixed_scan_size     | bool | Outputs a fixed scan data size.<br/>default: `true` |
+| fixed_scan_size     | bool | Outputs fixed scan data size, workaround for `slam_toolbox`.<br/>default: `true` |
 More paramters details, see [here](details.md)
 
 ## Notes about `fixed_scan_size`
