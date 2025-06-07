@@ -31,6 +31,29 @@
 
 #define ROS2Verision "1.0.1"
 
+// Function to findout mode to guess the validation value use by slam_toolbox
+int findMode(int data[], int size) {
+    int maxCount = 0;
+    int mode = data[0];
+
+    for (int i = 0; i < size; i++) {
+        int count = 0;
+
+        for (int j = 0; j < size; j++) {
+            if (data[j] == data[i]) {
+                count++;
+            }
+        }
+
+        if (count > maxCount) {
+            maxCount = count;
+            mode = data[i];
+        }
+    }
+
+    return mode;
+}
+
 int main(int argc, char *argv[])
 {
   rclcpp::init(argc, argv);
@@ -221,7 +244,7 @@ int main(int argc, char *argv[])
 
   int scan_size_cal_count = 0;
   int fixed_scan_size = 0;
-  float sum_angle_increment = 0.0f;
+  int a_scan_size[30] = {0};
 
   while (ret && rclcpp::ok())
   {
@@ -235,21 +258,19 @@ int main(int argc, char *argv[])
         // Sum first 30 scan's angle_increment
         if (scan_size_cal_count == 0)
           RCLCPP_INFO(node->get_logger(), "[YDLIDAR INFO] Calculate the fixed scan size by first 30 data, please wait...");
-        sum_angle_increment += scan.config.angle_increment;
+        a_scan_size[scan_size_cal_count] = scan.points.size();
         scan_size_cal_count++;
       }
       else
       {
         if (scan_size_cal_count == 30)
         {
-          // Calculate the average of the first 30 scan's angle_increment, and get the best fixed scan size
-          // The fixed size of the LaserScan data
+          // Calculate the mode of the first 30 scan's scan data size.
           // slam_toolbox's vaildate function: max_angle - min_angle / angle_increment + residual
           // (residual = 0 if it is 360 deg lidar, others is 1)
           // (The vaildation value seems like just calculate at first time)
-          fixed_scan_size = (scan.config.max_angle - scan.config.min_angle) / (sum_angle_increment / 30);
+          fixed_scan_size = findMode(a_scan_size, 30);
           RCLCPP_INFO(node->get_logger(), "[YDLIDAR INFO] Fixed scan size = %d", fixed_scan_size);
-          if (!(f_maxangle == 180.0f && f_minangle == -180.0f)) fixed_scan_size++;
           scan_size_cal_count++;
         }
         auto scan_msg = std::make_shared<sensor_msgs::msg::LaserScan>();

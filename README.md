@@ -186,7 +186,7 @@ The ydlidar_ros2_driver internal parameters are in the launch file, they are lis
 More paramters details, see [here](details.md)
 
 ## Notes about `fixed_scan_size`
-This function will outputs fixed size of scan data, data that is over or under is truncated or filled up, the data size depends on the average of the first 30 scans obtained after the node is activated, which for `slam_toolbox` reduces the chance of data being discarded.  
+This function will outputs fixed size of scan data, data that is over or under is truncated or filled up, the data size depends on the mode of the first 30 scans's data size after the node is activated, which for `slam_toolbox` to prevent the chance of data being discarded.  
   
 NOTE: But if the message like this still occurs and very few data use by the `slam_toolbox`:  
 ```
@@ -197,7 +197,7 @@ NOTE: But if the message like this still occurs and very few data use by the `sl
 ```
 This means that slam_toolbox captured the scan data at the wrong time, **restart slam_toolbox to solve the problem**.  
   
-The `slam_toolbox` seems to capture only one of the data in the vary first time as the basis of data size validation, and will be calculated by the formula `max_angle - min_angle / angle_increment + residual` (`residual` in 360 degrees Lidar is `0`, others lidar is `1`), if the data size calculated from the `angle_increment` value happens to be different from the one calculated in this node, it will lead to the problem that most of the data can not be verified, the purpose of adopting the average value in this node is to reduce the chance that the calculated value is different from the value captured by `slam_toolbox`.
+The `slam_toolbox` seems to capture only one of the data in the vary first time as the basis of data size validation, and will be calculated by the formula `max_angle - min_angle / angle_increment + residual` (`residual` in 360 degrees Lidar is `0`, others lidar is `1`), if the data size calculated from the `angle_increment` value happens to be different from the one calculated in this node, it will lead to the problem that most of the data can not be verified.  
 
 ## Contact EAI
 ![Development Path](images/EAI.png)
