@@ -186,16 +186,18 @@ The ydlidar_ros2_driver internal parameters are in the launch file, they are lis
 More paramters details, see [here](details.md)
 
 ## Notes about `fixed_scan_size`
-This function will outputs fixed size of scan data, data that is over or under is truncated or filled up, the data size depends on the mode of the first 30 scans's data size after the node is activated, which for `slam_toolbox` to prevent the chance of data being discarded.  
+This function will outputs fixed size of scan data, it will put the nearest sample points to the fix-sized slots, the data size and angle increasement depends on the mode of the first 30 scans's data size after the node is activated, which for `slam_toolbox` to prevent the chance of data being discarded.  
   
-NOTE: But if the message like this still occurs and very few data use by the `slam_toolbox`:  
+~~NOTE: But if the message like this still occurs and very few data use by the `slam_toolbox`:~~  
 ```
 [async_slam_toolbox_node-9] LaserRangeScan contains 602 range readings, expected 600
 [async_slam_toolbox_node-9] LaserRangeScan contains 602 range readings, expected 600
 [async_slam_toolbox_node-9] LaserRangeScan contains 602 range readings, expected 600
 ...
 ```
-This means that slam_toolbox captured the scan data at the wrong time, **restart slam_toolbox to solve the problem**.  
+~~This means that slam_toolbox captured the scan data at the wrong time, **restart slam_toolbox to solve the problem**.~~  
+  
+2025/06/10 Changelog: Change the function to fix the `angle_increment` and the `scan_size`, then find the nearest sample point from lidar to put in, so the problem may not occur again! 
   
 The `slam_toolbox` seems to capture only one of the data in the vary first time as the basis of data size validation, and will be calculated by the formula `max_angle - min_angle / angle_increment + residual` (`residual` in 360 degrees Lidar is `0`, others lidar is `1`), if the data size calculated from the `angle_increment` value to be different from the provided by this node, it will cause the problem that the data can not be verified.  
 (Seems like some lidar's rotation speed not stable, so cause the unstable data count of each rotation).  
