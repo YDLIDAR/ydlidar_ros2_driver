@@ -32,9 +32,9 @@
 #define ROS2Verision "1.0.1"
 
 // Function to findout mode to guess the validation value use by slam_toolbox.
-int findMode(int data[], int size) {
+void findMode(int data[], int size, int* mode_value, int* mode_index) {
     int maxCount = 0;
-    int mode = data[0];
+    *mode_value = data[0];
     // Loop for check all values in the array.
     for (int i = 0; i < size; i++) {
         int count = 0;
@@ -49,11 +49,10 @@ int findMode(int data[], int size) {
         // as the temporary mode number, until the final mode value to be find.
         if (count > maxCount) {
             maxCount = count;
-            mode = data[i];
+            *mode_value = data[i];
+            *mode_index = i;
         }
     }
-
-    return mode;
 }
 
 int main(int argc, char *argv[])
@@ -246,7 +245,9 @@ int main(int argc, char *argv[])
 
   int scan_size_cal_count = 0;
   int fixed_scan_size = 0;
+  float fixed_angle_inc = 0.0f;
   int a_scan_size[30] = {0};
+  float a_scan_ang_inc[30] = {0.0f};
 
   while (ret && rclcpp::ok())
   {
@@ -261,6 +262,7 @@ int main(int argc, char *argv[])
         if (scan_size_cal_count == 0)
           RCLCPP_INFO(node->get_logger(), "[YDLIDAR INFO] Calculate the fixed scan size by first 30 data, please wait...");
         a_scan_size[scan_size_cal_count] = scan.points.size();
+        a_scan_ang_inc[scan_size_cal_count] = scan.config.angle_increment;
         scan_size_cal_count++;
       }
       else
@@ -271,8 +273,10 @@ int main(int argc, char *argv[])
           // slam_toolbox's vaildate function: max_angle - min_angle / angle_increment + residual
           // (residual = 0 if it is 360 deg lidar, others is 1)
           // (The vaildation value seems like just calculate at first time)
-          fixed_scan_size = findMode(a_scan_size, 30);
-          RCLCPP_INFO(node->get_logger(), "[YDLIDAR INFO] Fixed scan size = %d", fixed_scan_size);
+          int mode_index = 0;
+          findMode(a_scan_size, 30, &fixed_scan_size, &mode_index);
+          fixed_angle_inc = a_scan_ang_inc[mode_index];
+          RCLCPP_INFO(node->get_logger(), "[YDLIDAR INFO] Fixed scan size = %d, angle inc. = %f", fixed_scan_size, fixed_angle_inc);
           scan_size_cal_count++;
         }
         auto scan_msg = std::make_shared<sensor_msgs::msg::LaserScan>();
@@ -284,7 +288,17 @@ int main(int argc, char *argv[])
         pc_msg->header = scan_msg->header;
         scan_msg->angle_min = scan.config.min_angle;
         scan_msg->angle_max = scan.config.max_angle;
-        scan_msg->angle_increment = scan.config.angle_increment;
+        if (b_fixed_scan_size)
+        {
+          // We also replace the original `scan.config.angle_increment` to let the functions later can calculate
+          // the nearst slot to put the scan value in (The lidar will return the point's distance and angle)
+          scan_msg->angle_increment = fixed_angle_inc;
+          scan.config.angle_increment = fixed_angle_inc;
+        }
+        else
+        {
+          scan_msg->angle_increment = scan.config.angle_increment;
+        }
         scan_msg->scan_time = scan.config.scan_time;
         scan_msg->time_increment = scan.config.time_increment;
         scan_msg->range_min = scan.config.min_range;
@@ -312,7 +326,9 @@ int main(int argc, char *argv[])
 
         for (size_t i = 0; i < scan.points.size(); i++)
         {
-          int index = std::ceil((scan.points[i].angle - scan.config.min_angle) / scan.config.angle_increment);
+          // Calculate the nearest array index for the current point based on its angle.
+          // Note: change the celi to round to approach the nearst slot!
+          int index = std::round((scan.points[i].angle - scan.config.min_angle) / scan.config.angle_increment);
           if (index >= 0 && index < size)
           {
             // Fixed: add the logic that value larger than the max_range is invalid
