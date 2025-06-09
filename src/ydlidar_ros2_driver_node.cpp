@@ -31,20 +31,22 @@
 
 #define ROS2Verision "1.0.1"
 
-// Function to findout mode to guess the validation value use by slam_toolbox
+// Function to findout mode to guess the validation value use by slam_toolbox.
 int findMode(int data[], int size) {
     int maxCount = 0;
     int mode = data[0];
-
+    // Loop for check all values in the array.
     for (int i = 0; i < size; i++) {
         int count = 0;
-
+        // Loop for compare is it a value in array same as "the value to be check"(Outer loop).
         for (int j = 0; j < size; j++) {
             if (data[j] == data[i]) {
+                // If value are the same, add the counter.
                 count++;
             }
         }
-
+        // If the final counter value is largest, update the maxCount, and make this value in array
+        // as the temporary mode number, until the final mode value to be find.
         if (count > maxCount) {
             maxCount = count;
             mode = data[i];
