@@ -247,7 +247,6 @@ int main(int argc, char *argv[])
   int fixed_scan_size = 0;
   float fixed_angle_inc = 0.0f;
   int a_scan_size[30] = {0};
-  float a_scan_ang_inc[30] = {0.0f};
 
   while (ret && rclcpp::ok())
   {
@@ -262,7 +261,6 @@ int main(int argc, char *argv[])
         if (scan_size_cal_count == 0)
           RCLCPP_INFO(node->get_logger(), "[YDLIDAR INFO] Calculate the fixed scan size by first 30 data, please wait...");
         a_scan_size[scan_size_cal_count] = scan.points.size();
-        a_scan_ang_inc[scan_size_cal_count] = scan.config.angle_increment;
         scan_size_cal_count++;
       }
       else
@@ -275,7 +273,11 @@ int main(int argc, char *argv[])
           // (The vaildation value seems like just calculate at first time)
           int mode_index = 0;
           findMode(a_scan_size, 30, &fixed_scan_size, &mode_index);
-          fixed_angle_inc = a_scan_ang_inc[mode_index];
+          // Update angle_increment also calculated here, the lidar like TG30 not returns the correct angle increasement!
+          int scan_size_cal = fixed_scan_size;
+          // If you got the expected smaller 1 than the actual size, comment out!
+          if ( f_maxangle != 180.0f || f_minangle != -180.0f ) scan_size_cal--;
+          fixed_angle_inc = (scan.config.max_angle - scan.config.min_angle) / scan_size_cal;
           RCLCPP_INFO(node->get_logger(), "[YDLIDAR INFO] Fixed scan size = %d, angle inc. = %f", fixed_scan_size, fixed_angle_inc);
           scan_size_cal_count++;
         }
