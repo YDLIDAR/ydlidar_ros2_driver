@@ -273,7 +273,7 @@ int main(int argc, char *argv[])
           // (The vaildation value seems like just calculate at first time)
           int mode_index = 0;
           findMode(a_scan_size, 30, &fixed_scan_size, &mode_index);
-          // Update angle_increment also calculated here, the lidar like TG30 not returns the correct angle increasement!
+          // Update 250611: angle_increment also calculated here, the lidar like TG30 not returns the correct angle increasement!
           int scan_size_cal = fixed_scan_size;
           // If you got the expected smaller 1 than the actual size, comment out!
           if ( f_maxangle != 180.0f || f_minangle != -180.0f ) scan_size_cal--;
