@@ -31,8 +31,32 @@
 
 #define ROS2Verision "1.0.1"
 
+// Function to findout mode to guess the validation value use by slam_toolbox.
+void findMode(int data[], int size, int* mode_value, int* mode_index) {
+    int maxCount = 0;
+    *mode_value = data[0];
+    // Loop for check all values in the array.
+    for (int i = 0; i < size; i++) {
+        int count = 0;
+        // Loop for compare is it a value in array same as "the value to be check"(Outer loop).
+        for (int j = 0; j < size; j++) {
+            if (data[j] == data[i]) {
+                // If value are the same, add the counter.
+                count++;
+            }
+        }
+        // If the final counter value is largest, update the maxCount, and make this value in array
+        // as the temporary mode number, until the final mode value to be find.
+        if (count > maxCount) {
+            maxCount = count;
+            *mode_value = data[i];
+            *mode_index = i;
+        }
+    }
+}
 
-int main(int argc, char *argv[]) {
+int main(int argc, char *argv[])
+{
   rclcpp::init(argc, argv);
 
   auto node = rclcpp::Node::make_shared("ydlidar_ros2_driver_node");
@@ -43,10 +67,10 @@ int main(int argc, char *argv[]) {
   std::string str_optvalue = "/dev/ydlidar";
   node->declare_parameter("port", str_optvalue);
   node->get_parameter("port", str_optvalue);
-  ///lidar port
+  /// lidar port
   laser.setlidaropt(LidarPropSerialPort, str_optvalue.c_str(), str_optvalue.size());
 
-  ///ignore array
+  /// ignore array
   str_optvalue = "";
   node->declare_parameter("ignore_array", str_optvalue);
   node->get_parameter("ignore_array", str_optvalue);
@@ -88,7 +112,7 @@ int main(int argc, char *argv[]) {
   node->declare_parameter("intensity_bit", optval);
   node->get_parameter("intensity_bit", optval);
   laser.setlidaropt(LidarPropIntenstiyBit, &optval, sizeof(int));
-     
+
   //////////////////////bool property/////////////////
   /// fixed angle resolution
   bool b_optvalue = false;
@@ -124,7 +148,11 @@ int main(int argc, char *argv[]) {
   node->declare_parameter("support_motor_dtr", b_optvalue);
   node->get_parameter("support_motor_dtr", b_optvalue);
   laser.setlidaropt(LidarPropSupportMotorDtrCtrl, &b_optvalue, sizeof(bool));
-  //是否启用调试
+  // Fixed scan size
+  bool b_fixed_scan_size = true;
+  node->declare_parameter("fixed_scan_size", b_fixed_scan_size);
+  node->get_parameter("fixed_scan_size", b_fixed_scan_size);
+  // Enable Debug
   b_optvalue = false;
   node->declare_parameter("debug", b_optvalue);
   node->get_parameter("debug", b_optvalue);
@@ -132,16 +160,16 @@ int main(int argc, char *argv[]) {
 
   //////////////////////float property/////////////////
   /// unit: °
-  float f_optvalue = 180.0f;
-  node->declare_parameter("angle_max", f_optvalue);
-  node->get_parameter("angle_max", f_optvalue);
-  laser.setlidaropt(LidarPropMaxAngle, &f_optvalue, sizeof(float));
-  f_optvalue = -180.0f;
-  node->declare_parameter("angle_min", f_optvalue);
-  node->get_parameter("angle_min", f_optvalue);
-  laser.setlidaropt(LidarPropMinAngle, &f_optvalue, sizeof(float));
+  float f_maxangle = 180.0f;
+  node->declare_parameter("angle_max", f_maxangle);
+  node->get_parameter("angle_max", f_maxangle);
+  laser.setlidaropt(LidarPropMaxAngle, &f_maxangle, sizeof(float));
+  float f_minangle = -180.0f;
+  node->declare_parameter("angle_min", f_minangle);
+  node->get_parameter("angle_min", f_minangle);
+  laser.setlidaropt(LidarPropMinAngle, &f_minangle, sizeof(float));
   /// unit: m
-  f_optvalue = 64.f;
+  float f_optvalue = 64.f;
   node->declare_parameter("range_max", f_optvalue);
   node->get_parameter("range_max", f_optvalue);
   laser.setlidaropt(LidarPropMaxRange, &f_optvalue, sizeof(float));
@@ -159,11 +187,16 @@ int main(int argc, char *argv[]) {
   node->declare_parameter("invalid_range_is_inf", invalid_range_is_inf);
   node->get_parameter("invalid_range_is_inf", invalid_range_is_inf);
 
+  // Publisher for LaserScan with updated QoS settings
+  // Refrence by Oyefusi-Samuel's workaround: https://github.com/Oyefusi-Samuel/ydlidar_ros2_driver-master
+  rclcpp::QoS qos(rclcpp::KeepLast(10));  // Keep last 10 messages in the buffer
+  qos.reliable();  // Ensure reliable delivery of messages
+  qos.durability_volatile();  // Volatile durability, meaning no retention of messages after disconnect
 
   bool ret = laser.initialize();
-  if (ret) 
+  if (ret)
   {
-    //设置GS工作模式（非GS雷达请无视该代码）
+    // 设置GS工作模式（非GS雷达请无视该代码）
     int i_v = 0;
     node->declare_parameter("m1_mode", i_v);
     node->get_parameter("m1_mode", i_v);
@@ -176,105 +209,167 @@ int main(int argc, char *argv[]) {
     node->declare_parameter("m3_mode", i_v);
     node->get_parameter("m3_mode", i_v);
     laser.setWorkMode(i_v, 0x04);
-    //启动扫描
+    // 启动扫描
     ret = laser.turnOn();
-  } 
-  else 
+  }
+  else
   {
     RCLCPP_ERROR(node->get_logger(), "%s\n", laser.DescribeError());
   }
-  
-  auto laser_pub = node->create_publisher<sensor_msgs::msg::LaserScan>("scan", rclcpp::SensorDataQoS());
-  auto pc_pub = node->create_publisher<sensor_msgs::msg::PointCloud>("point_cloud", rclcpp::SensorDataQoS());
-  
+
+  // Apply our QoS policy
+  auto laser_pub = node->create_publisher<sensor_msgs::msg::LaserScan>("scan", qos);
+  auto pc_pub = node->create_publisher<sensor_msgs::msg::PointCloud>("point_cloud", qos);
+
   auto stop_scan_service =
-    [&laser](const std::shared_ptr<rmw_request_id_t> request_header,
-  const std::shared_ptr<std_srvs::srv::Empty::Request> req,
-  std::shared_ptr<std_srvs::srv::Empty::Response> response) -> bool
+      [&laser](const std::shared_ptr<rmw_request_id_t> request_header,
+               const std::shared_ptr<std_srvs::srv::Empty::Request> req,
+               std::shared_ptr<std_srvs::srv::Empty::Response> response) -> bool
   {
     return laser.turnOff();
   };
 
-  auto stop_service = node->create_service<std_srvs::srv::Empty>("stop_scan",stop_scan_service);
+  auto stop_service = node->create_service<std_srvs::srv::Empty>("stop_scan", stop_scan_service);
 
   auto start_scan_service =
-    [&laser](const std::shared_ptr<rmw_request_id_t> request_header,
-  const std::shared_ptr<std_srvs::srv::Empty::Request> req,
-  std::shared_ptr<std_srvs::srv::Empty::Response> response) -> bool
+      [&laser](const std::shared_ptr<rmw_request_id_t> request_header,
+               const std::shared_ptr<std_srvs::srv::Empty::Request> req,
+               std::shared_ptr<std_srvs::srv::Empty::Response> response) -> bool
   {
     return laser.turnOn();
   };
 
-  auto start_service = node->create_service<std_srvs::srv::Empty>("start_scan",start_scan_service);
+  auto start_service = node->create_service<std_srvs::srv::Empty>("start_scan", start_scan_service);
 
   rclcpp::WallRate loop_rate(20);
 
-  while (ret && rclcpp::ok()) {
+  int scan_size_cal_count = 0;
+  int fixed_scan_size = 0;
+  float fixed_angle_inc = 0.0f;
+  int a_scan_size[30] = {0};
 
-    LaserScan scan;//
+  while (ret && rclcpp::ok())
+  {
 
-    if (laser.doProcessSimple(scan)) {
+    LaserScan scan; //
 
-      auto scan_msg = std::make_shared<sensor_msgs::msg::LaserScan>();
-      auto pc_msg = std::make_shared<sensor_msgs::msg::PointCloud>();
-
-      scan_msg->header.stamp.sec = RCL_NS_TO_S(scan.stamp);
-      scan_msg->header.stamp.nanosec =  scan.stamp - RCL_S_TO_NS(scan_msg->header.stamp.sec);
-      scan_msg->header.frame_id = frame_id;
-      pc_msg->header = scan_msg->header;
-      scan_msg->angle_min = scan.config.min_angle;
-      scan_msg->angle_max = scan.config.max_angle;
-      scan_msg->angle_increment = scan.config.angle_increment;
-      scan_msg->scan_time = scan.config.scan_time;
-      scan_msg->time_increment = scan.config.time_increment;
-      scan_msg->range_min = scan.config.min_range;
-      scan_msg->range_max = scan.config.max_range;
-      
-      int size = (scan.config.max_angle - scan.config.min_angle)/ scan.config.angle_increment + 1;
-      scan_msg->ranges.resize(size);
-      scan_msg->intensities.resize(size);
-
-      pc_msg->channels.resize(2);
-      int idx_intensity = 0;
-      pc_msg->channels[idx_intensity].name = "intensities";
-      int idx_timestamp = 1;
-      pc_msg->channels[idx_timestamp].name = "stamps";
-
-      for(size_t i=0; i < scan.points.size(); i++) {
-        int index = std::ceil((scan.points[i].angle - scan.config.min_angle)/scan.config.angle_increment);
-        if(index >=0 && index < size) {
-	  if (scan.points[i].range >= scan.config.min_range) {
-            scan_msg->ranges[index] = scan.points[i].range;
-            scan_msg->intensities[index] = scan.points[i].intensity;
-	  }
-        }
-
-	if (scan.points[i].range >= scan.config.min_range &&
-             scan.points[i].range <= scan.config.max_range) {
-          geometry_msgs::msg::Point32 point;
-          point.x = scan.points[i].range * cos(scan.points[i].angle);
-          point.y = scan.points[i].range * sin(scan.points[i].angle);
-          point.z = 0.0;
-          pc_msg->points.push_back(point);
-          pc_msg->channels[idx_intensity].values.push_back(scan.points[i].intensity);
-          pc_msg->channels[idx_timestamp].values.push_back(i * scan.config.time_increment);
-        }
-
+    if (laser.doProcessSimple(scan))
+    {
+      if (b_fixed_scan_size && scan_size_cal_count < 30)
+      {
+        // Sum first 30 scan's angle_increment
+        if (scan_size_cal_count == 0)
+          RCLCPP_INFO(node->get_logger(), "[YDLIDAR INFO] Calculate the fixed scan size by first 30 data, please wait...");
+        a_scan_size[scan_size_cal_count] = scan.points.size();
+        scan_size_cal_count++;
       }
+      else
+      {
+        if (scan_size_cal_count == 30)
+        {
+          // Calculate the mode of the first 30 scan's scan data size.
+          // slam_toolbox's vaildate function: max_angle - min_angle / angle_increment + residual
+          // (residual = 0 if it is 360 deg lidar, others is 1)
+          // (The vaildation value seems like just calculate at first time)
+          int mode_index = 0;
+          findMode(a_scan_size, 30, &fixed_scan_size, &mode_index);
+          // Update 250611: angle_increment also calculated here, the lidar like TG30 not returns the correct angle increasement!
+          int scan_size_cal = fixed_scan_size;
+          // If you got the expected smaller 1 than the actual size, comment out!
+          if ( f_maxangle != 180.0f || f_minangle != -180.0f ) scan_size_cal--;
+          fixed_angle_inc = (scan.config.max_angle - scan.config.min_angle) / scan_size_cal;
+          RCLCPP_INFO(node->get_logger(), "[YDLIDAR INFO] Fixed scan size = %d, angle inc. = %f", fixed_scan_size, fixed_angle_inc);
+          scan_size_cal_count++;
+        }
+        auto scan_msg = std::make_shared<sensor_msgs::msg::LaserScan>();
+        auto pc_msg = std::make_shared<sensor_msgs::msg::PointCloud>();
 
-      laser_pub->publish(*scan_msg);
-      pc_pub->publish(*pc_msg);
+        scan_msg->header.stamp.sec = RCL_NS_TO_S(scan.stamp);
+        scan_msg->header.stamp.nanosec = scan.stamp - RCL_S_TO_NS(scan_msg->header.stamp.sec);
+        scan_msg->header.frame_id = frame_id;
+        pc_msg->header = scan_msg->header;
+        scan_msg->angle_min = scan.config.min_angle;
+        scan_msg->angle_max = scan.config.max_angle;
+        if (b_fixed_scan_size)
+        {
+          // We also replace the original `scan.config.angle_increment` to let the functions later can calculate
+          // the nearst slot to put the scan value in (The lidar will return the point's distance and angle)
+          scan_msg->angle_increment = fixed_angle_inc;
+          scan.config.angle_increment = fixed_angle_inc;
+        }
+        else
+        {
+          scan_msg->angle_increment = scan.config.angle_increment;
+        }
+        scan_msg->scan_time = scan.config.scan_time;
+        scan_msg->time_increment = scan.config.time_increment;
+        scan_msg->range_min = scan.config.min_range;
+        scan_msg->range_max = scan.config.max_range;
 
-    } else {
+        // Let the LaserScan's topic size fixed when fixed_scan_size is true, keep the original logic if is false
+        int size = 0;
+        if (b_fixed_scan_size)
+        {
+          size = fixed_scan_size;
+        }
+        else
+        {
+          size = (scan.config.max_angle - scan.config.min_angle) / scan.config.angle_increment + 1;
+        }
+
+        scan_msg->ranges.resize(size);
+        scan_msg->intensities.resize(size);
+
+        pc_msg->channels.resize(2);
+        int idx_intensity = 0;
+        pc_msg->channels[idx_intensity].name = "intensities";
+        int idx_timestamp = 1;
+        pc_msg->channels[idx_timestamp].name = "stamps";
+
+        for (size_t i = 0; i < scan.points.size(); i++)
+        {
+          // Calculate the nearest array index for the current point based on its angle.
+          // Note: change the celi to round to approach the nearst slot!
+          int index = std::round((scan.points[i].angle - scan.config.min_angle) / scan.config.angle_increment);
+          if (index >= 0 && index < size)
+          {
+            // Fixed: add the logic that value larger than the max_range is invalid
+            if (scan.points[i].range >= scan.config.min_range &&
+                scan.points[i].range <= scan.config.max_range)
+            {
+              scan_msg->ranges[index] = scan.points[i].range;
+              scan_msg->intensities[index] = scan.points[i].intensity;
+            }
+          }
+
+          if (scan.points[i].range >= scan.config.min_range &&
+              scan.points[i].range <= scan.config.max_range)
+          {
+            geometry_msgs::msg::Point32 point;
+            point.x = scan.points[i].range * cos(scan.points[i].angle);
+            point.y = scan.points[i].range * sin(scan.points[i].angle);
+            point.z = 0.0;
+            pc_msg->points.push_back(point);
+            pc_msg->channels[idx_intensity].values.push_back(scan.points[i].intensity);
+            pc_msg->channels[idx_timestamp].values.push_back(i * scan.config.time_increment);
+          }
+        }
+
+        laser_pub->publish(*scan_msg);
+        pc_pub->publish(*pc_msg);
+      }
+    }
+    else
+    {
       RCLCPP_ERROR(node->get_logger(), "Failed to get scan");
     }
-    if(!rclcpp::ok()) {
+    if (!rclcpp::ok())
+    {
       break;
     }
     rclcpp::spin_some(node);
     loop_rate.sleep();
   }
-
 
   RCLCPP_INFO(node->get_logger(), "[YDLIDAR INFO] Now YDLIDAR is stopping .......");
   laser.turnOff();
