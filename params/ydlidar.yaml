@@ -1,25 +1,66 @@
+# YDLidar X4 Pro Configuration for ROS2 Jazzy
 ydlidar_ros2_driver_node:
   ros__parameters:
-    port: /dev/ttyUSB0
+    # Serial port - your lidar is on USB1
+    port: /dev/ttyUSB1
+    
+    # TF frame ID for the laser scan
     frame_id: laser_frame
+    
+    # Ignore array for filtering angle ranges (e.g., "-90, -80, 30, 40")
     ignore_array: ""
-    baudrate: 230400
+    
+    # X4/X4 Pro baudrate: 128000 bps
+    baudrate: 128000
+    
+    # Lidar type: 1 = TYPE_TRIANGLE (X4 is a triangulation lidar)
     lidar_type: 1
+    
+    # Device type: 0 = YDLIDAR_TYPE_SERIAL
     device_type: 0
+    
+    # X4 is NOT single channel (only S2/X2/X2L are single channel)
     isSingleChannel: false
+    
+    # X4 does not have intensity data
     intensity: false
     intensity_bit: 0
-    sample_rate: 9
+    
+    # Sample rate: 5 KHz for X4
+    sample_rate: 5
+    
+    # Number of abnormal startup data attempts
     abnormal_check_count: 4
+    
+    # Fixed angular resolution
     fixed_resolution: true
+    
+    # X4 reversion should be FALSE (not like G series)
     reversion: false
-    inverted: false
+    
+    # Inverted scanning direction (CounterClockWise)
+    inverted: true
+    
+    # Auto reconnect on disconnect
     auto_reconnect: true
-    support_motor_dtr: false
+    
+    # X4 SUPPORTS motor DTR control
+    support_motor_dtr: true
+    
+    # Angular range (full 360 degrees)
     angle_max: 180.0
     angle_min: -180.0
-    range_max: 64.0
-    range_min: 0.01
+    
+    # X4 range: 0.12m - 10m
+    range_max: 10.0
+    range_min: 0.12
+    
+    # Scanning frequency (5-12 Hz via PWM - set to 10 Hz default)
+    # Note: X4 frequency is PWM controlled, not directly configurable
     frequency: 10.0
+    
+    # Invalid range handling
     invalid_range_is_inf: false
+    
+    # Debug mode
     debug: false
