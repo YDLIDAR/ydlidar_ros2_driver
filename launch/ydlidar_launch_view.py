@@ -27,33 +27,38 @@ import os
 
 def generate_launch_description():
     share_dir = get_package_share_directory('ydlidar_ros2_driver')
-    rviz_config_file = os.path.join(share_dir, 'config','ydlidar.rviz')
+    rviz_config_file = os.path.join(share_dir, 'config', 'ydlidar.rviz')
     parameter_file = LaunchConfiguration('params_file')
-    node_name = 'ydlidar_ros2_driver_node'
 
     params_declare = DeclareLaunchArgument('params_file',
                                            default_value=os.path.join(
                                                share_dir, 'params', 'ydlidar.yaml'),
-                                           description='FPath to the ROS2 parameters file to use.')
+                                           description='Path to the ROS2 parameters file to use.')
 
+    # Updated for ROS2 Jazzy - use 'executable' instead of 'node_executable'
+    # and 'name' instead of 'node_name', 'namespace' instead of 'node_namespace'
     driver_node = LifecycleNode(package='ydlidar_ros2_driver',
-                                node_executable='ydlidar_ros2_driver_node',
-                                node_name='ydlidar_ros2_driver_node',
+                                executable='ydlidar_ros2_driver_node',
+                                name='ydlidar_ros2_driver_node',
                                 output='screen',
                                 emulate_tty=True,
                                 parameters=[parameter_file],
-                                node_namespace='/',
+                                namespace='/',
                                 )
+    
     tf2_node = Node(package='tf2_ros',
-                    node_executable='static_transform_publisher',
-                    node_name='static_tf_pub_laser',
-                    arguments=['0', '0', '0.02','0', '0', '0', '1','base_link','laser_frame'],
+                    executable='static_transform_publisher',
+                    name='static_tf_pub_laser',
+                    arguments=['--x', '0', '--y', '0', '--z', '0.02',
+                               '--roll', '0', '--pitch', '0', '--yaw', '0',
+                               '--frame-id', 'base_link', '--child-frame-id', 'laser_frame'],
                     )
+    
     rviz2_node = Node(package='rviz2',
-                    node_executable='rviz2',
-                    node_name='rviz2',
-                    arguments=['-d', rviz_config_file],
-                    )
+                      executable='rviz2',
+                      name='rviz2',
+                      arguments=['-d', rviz_config_file],
+                      )
 
     return LaunchDescription([
         params_declare,

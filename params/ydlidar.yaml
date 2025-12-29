@@ -1,25 +1,66 @@
+# YDLidar X4 Pro Configuration for ROS2 Jazzy
+# Note: This lidar reports as S2PRO and requires single channel mode
 ydlidar_ros2_driver_node:
   ros__parameters:
-    port: /dev/ttyUSB0
+    # Serial port - your lidar is on USB1
+    port: /dev/ttyUSB1
+    
+    # TF frame ID for the laser scan
     frame_id: laser_frame
+    
+    # Ignore array for filtering angle ranges (e.g., "-90, -80, 30, 40")
     ignore_array: ""
-    baudrate: 230400
+    
+    # Baudrate: 128000 bps (as detected by SDK)
+    baudrate: 128000
+    
+    # Lidar type: 1 = TYPE_TRIANGLE
     lidar_type: 1
+    
+    # Device type: 0 = YDLIDAR_TYPE_SERIAL
     device_type: 0
-    isSingleChannel: false
+    
+    # This lidar requires single channel mode (reports as S2PRO)
+    isSingleChannel: true
+    
+    # No intensity data
     intensity: false
     intensity_bit: 0
-    sample_rate: 9
+    
+    # Sample rate: 5 KHz (as detected by SDK)
+    sample_rate: 5
+    
+    # Number of abnormal startup data attempts
     abnormal_check_count: 4
+    
+    # Fixed angular resolution
     fixed_resolution: true
-    reversion: false
-    inverted: false
+    
+    # Reversion (matching what worked before)
+    reversion: true
+    
+    # Inverted scanning direction (CounterClockWise)
+    inverted: true
+    
+    # Auto reconnect on disconnect
     auto_reconnect: true
+    
+    # Motor DTR control
     support_motor_dtr: false
+    
+    # Angular range (full 360 degrees)
     angle_max: 180.0
     angle_min: -180.0
-    range_max: 64.0
-    range_min: 0.01
+    
+    # Range: 0.12m - 12m
+    range_max: 12.0
+    range_min: 0.12
+    
+    # Scanning frequency: 10 Hz
     frequency: 10.0
+    
+    # Invalid range handling
     invalid_range_is_inf: false
+    
+    # Debug mode
     debug: false
