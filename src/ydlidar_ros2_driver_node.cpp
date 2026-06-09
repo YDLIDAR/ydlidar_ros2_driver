@@ -1,4 +1,4 @@
-/*
+﻿/*
  *  YDLIDAR SYSTEM
  *  YDLIDAR ROS 2 Node
  *
@@ -100,7 +100,16 @@ YDLidarNode() : Node("ydlidar_ros2_driver_node")
 
 ~YDLidarNode()
 {
+  {
+    std::lock_guard<std::mutex> lock(scan_mutex_);
+    running_ = false;
+  }
+  scan_cv_.notify_all();
+  if (scan_thread_.joinable()) {
+    scan_thread_.join();
+  }
   stop_laser();
+  disconnect_laser();
 }
 
 private:
@@ -370,9 +379,17 @@ bool start_laser()
     }
     ok = laser_.turnOn();
   }
+  if (!ok) {
+    RCLCPP_FATAL(get_logger(), "[YDLIDAR] turnOn failed after %d retries: %s",
+                  INIT_RETRIES, laser_.DescribeError());
+    return false;
+  }
 
   running_ = true;
   scan_thread_ = std::thread(&YDLidarNode::scan_loop, this);
+
+  std::this_thread::sleep_for(std::chrono::milliseconds(50));
+
   RCLCPP_INFO(get_logger(), "[YDLIDAR] Start Laser ended successfully!");
   return true;
 }
@@ -384,6 +401,20 @@ bool stop_laser()
     RCLCPP_WARN(get_logger(), "[YDLIDAR] Already stopped, call start first");
     return false;
   }
+  
+  {
+    std::lock_guard<std::mutex> lock(scan_mutex_);
+    if (!running_) {
+      RCLCPP_WARN(get_logger(), "[YDLIDAR] Already stopped, call start first");
+      return false;
+    }
+    running_ = false;
+  }
+  scan_cv_.notify_all();
+
+  if (scan_thread_.joinable()) {
+    scan_thread_.join();
+  }
 
   bool ok = laser_.turnOff();
   if (!ok) {
@@ -391,10 +422,6 @@ bool stop_laser()
     return false;
   }
 
-  running_ = false;
-  if (scan_thread_.joinable()) {
-    scan_thread_.join();
-  }
   RCLCPP_INFO(get_logger(), "[YDLIDAR] Stop Laser ended successfully!");
   return true;
 }
@@ -426,7 +453,6 @@ bool stop_and_disconnect_laser()
     RCLCPP_WARN(get_logger(), "[YDLIDAR] Stop and Disconnect ended with issues!");
     return false;
   }
-  running_ = false;
   return true;
 }
 
@@ -444,7 +470,6 @@ bool connect_and_start_laser()
     RCLCPP_WARN(get_logger(), "[YDLIDAR] Connect and Start Laser ended with issues!");
     return false;
   }
-  running_ = true;
   return true;
 }
 
@@ -461,7 +486,6 @@ bool restart_scan()
     RCLCPP_WARN(get_logger(), "[YDLIDAR] Scan Restart ended with issues!");
     return false;
   }
-  running_ = true;
   return true;
 }
 
@@ -478,10 +502,8 @@ bool reset_laser()
     RCLCPP_WARN(get_logger(), "[YDLIDAR] Reset ended with issues!");
     return false;
   }
-  
-  running_ = true;
   return true;
-  }
+}
 
 
 ///////////////////////////////////////////////////////////////////////////
@@ -567,7 +589,15 @@ void scan_loop()
 {
   int restart_counter = 0;
 
-  while (running_ && laser_.isScanning() && rclcpp::ok()) {
+  while (rclcpp::ok()) {
+
+    {
+      std::lock_guard<std::mutex> lock(scan_mutex_);
+      if (!running_ || !laser_.isScanning()) {
+        break;  // Exit the loop cleanly
+      }
+    }
+
     LaserScan scan;
 
     if (!laser_.doProcessSimple(scan)) {
@@ -575,7 +605,17 @@ void scan_loop()
         "[YDLIDAR] Scan failed (driver error: %d, scanning: %s)",
         static_cast<int>(laser_.getDriverError()),
         laser_.isScanning() ? "yes" : "no");
+
       restart_counter++;
+
+      {
+        std::lock_guard<std::mutex> lock(scan_mutex_);
+        if (!running_) {
+          RCLCPP_INFO(get_logger(), "[YDLIDAR] Scan loop received stop signal during error recovery");
+          break;
+        }
+      }
+
       std::this_thread::sleep_for(std::chrono::milliseconds(100));
       continue;
     }
@@ -723,6 +763,8 @@ sensor_msgs::msg::PointCloud2 make_point_cloud(
 
   std::thread       scan_thread_;
   std::atomic<bool> running_{false};
+  std::condition_variable scan_cv_;
+  std::mutex scan_mutex_;
 };
 
 
