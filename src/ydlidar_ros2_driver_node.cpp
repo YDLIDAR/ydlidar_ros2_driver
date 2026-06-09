@@ -71,7 +71,6 @@ public:
 YDLidarNode() : Node("ydlidar_ros2_driver_node")
 {
   RCLCPP_INFO(get_logger(), "[YDLIDAR] Driver version: %s", ROS2_DRIVER_VERSION);
-
   node_name = get_name();
   node_namespace = get_namespace();
 
@@ -80,15 +79,9 @@ YDLidarNode() : Node("ydlidar_ros2_driver_node")
   log_parameters(lidar_param_);
 
   if (!apply_properties(lidar_param_)) {
-      throw std::runtime_error("Failed to apply laser properties");
+    throw std::runtime_error("Failed to apply laser properties");
   }
 
-  // The T-mini Pro powers on in idle mode (per spec section 1, Development
-  // Manual). The SDK connects and immediately queries health [A5 92] and
-  // device info [A5 90]. If the device hasn't finished its boot sequence the
-  // health query times out with 0xffffffff, leaving the driver in a state
-  // where startScan() also fails. A short delay here gives the device time
-  // to finish booting before the first serial command is sent.
   std::this_thread::sleep_for(std::chrono::milliseconds(BOOT_DELAY_MS));
 
   if (!connect_and_start_laser()) {
@@ -96,29 +89,19 @@ YDLidarNode() : Node("ydlidar_ros2_driver_node")
   }
 
   sync_lidar_properties(lidar_param_);
-
   create_publishers();
   create_services();
 
-  // Register param callback only after initialization is complete so
-  // parameter changes cannot race with hardware bring-up.
   param_cb_handle_ = this->add_on_set_parameters_callback(
     std::bind(&YDLidarNode::on_param_change, this, std::placeholders::_1));
 
-  running_ = true;
-  scan_thread_ = std::thread(&YDLidarNode::scan_loop, this);
-
   RCLCPP_INFO(get_logger(), "[YDLIDAR] Initialized successfully");
-  }
+}
 
 ~YDLidarNode()
 {
-    running_ = false;
-    if (scan_thread_.joinable()) {
-      scan_thread_.join();
-    }
-    disconnect_laser();
-    }
+  stop_laser();
+}
 
 private:
   ///////////////////////////////////////////////////////////////////////////
@@ -327,12 +310,6 @@ on_param_change(const std::vector<rclcpp::Parameter> &params)
       return result;
 }
 
-  // Stop the scan thread, reset hardware, then restart.
-  running_ = false;
-  if (scan_thread_.joinable()) {
-      scan_thread_.join();
-  }
-
   if (!restart_scan()) {
       RCLCPP_ERROR(get_logger(), "[YDLIDAR] Failed to reset laser after parameter change");
       result.successful = false;
@@ -344,9 +321,6 @@ on_param_change(const std::vector<rclcpp::Parameter> &params)
       std::lock_guard<std::mutex> lock(param_mutex_);
       lidar_param_ = updated;
   }
-
-  running_ = true;
-  scan_thread_ = std::thread(&YDLidarNode::scan_loop, this);
 
   return result;
 }
@@ -369,7 +343,6 @@ bool connect_laser()
   if (!ok) {
       RCLCPP_FATAL(get_logger(), "[YDLIDAR] Init failed after %d retries: %s",
                     INIT_RETRIES, laser_.DescribeError());
-  return false;
   }
   return ok;
 }
@@ -377,29 +350,84 @@ bool connect_laser()
 // Try to start laser until timeout, or max tries
 bool start_laser()
 {
+  RCLCPP_INFO(get_logger(), "[YDLIDAR] Start Laser");
+  if (running_) {
+    RCLCPP_WARN(get_logger(), "[YDLIDAR] Already scanning, call stop first");
+    return false;
+  }
+
   bool ok = laser_.turnOn();
   for (int i = 0; i < INIT_RETRIES && !ok; ++i) {
-    RCLCPP_ERROR(get_logger(), "[YDLIDAR] turnOn failed (driver error: %d) — retry %d/%d",
-    static_cast<int>(laser_.getDriverError()), i + 1, INIT_RETRIES);
-    disconnect_laser();
+    RCLCPP_ERROR(get_logger(), "[YDLIDAR] Init failed: %s — retry %d/%d",
+    laser_.DescribeError(), i + 1, INIT_RETRIES);
     std::this_thread::sleep_for(std::chrono::milliseconds(BOOT_DELAY_MS));
-    ok = laser_.initialize() && laser_.turnOn();
+    if (!ok) {
+      RCLCPP_INFO(get_logger(), "[YDLIDAR] Attempting to reconnect to laser...");
+      if (!connect_laser()) {
+        RCLCPP_ERROR(get_logger(), "[YDLIDAR] Reconnect failed: %s", laser_.DescribeError());
+        continue;
+      }
+    }
+    ok = laser_.turnOn();
   }
+
+  running_ = true;
+  scan_thread_ = std::thread(&YDLidarNode::scan_loop, this);
+  RCLCPP_INFO(get_logger(), "[YDLIDAR] Start Laser ended successfully!");
+  return true;
+}
+
+bool stop_laser()
+{
+  RCLCPP_INFO(get_logger(), "[YDLIDAR] Stop Laser");
+  if (!running_) {
+    RCLCPP_WARN(get_logger(), "[YDLIDAR] Already stopped, call start first");
+    return false;
+  }
+
+  bool ok = laser_.turnOff();
   if (!ok) {
-    RCLCPP_FATAL(get_logger(), "[YDLIDAR] turnOn failed after %d retries: %s",
-    INIT_RETRIES, laser_.DescribeError());
+    RCLCPP_FATAL(get_logger(), "[YDLIDAR] turnOff failed: %s", laser_.DescribeError());
+    return false;
   }
+
+  running_ = false;
+  if (scan_thread_.joinable()) {
+    scan_thread_.join();
+  }
+  RCLCPP_INFO(get_logger(), "[YDLIDAR] Stop Laser ended successfully!");
+  return true;
+}
+
+bool disconnect_laser()
+{
+  RCLCPP_INFO(get_logger(), "[YDLIDAR] Start Disconnect");
+  bool ok = laser_.disconnecting();
+  if (ok){
+    RCLCPP_INFO(get_logger(), "[YDLIDAR] Disconnect ended successfuly!");
+  }else{
+    RCLCPP_WARN(get_logger(), "[YDLIDAR] Disconnect ended with issues!");
+  }
+
   return ok;
-  }
+}
 
 // Stop scanning and close the serial port.
 // turnOff() alone only stops the scan thread — the serial port stays open.
 // disconnecting() must follow so that the next initialize() actually
 // reopens the port (checkCOMMs skips reconnection if isconnected() is true).
-void disconnect_laser()
+bool stop_and_disconnect_laser()
 {
-  laser_.turnOff();
-  laser_.disconnecting();
+  RCLCPP_INFO(get_logger(), "[YDLIDAR] Start Stop laser and Disconnect");
+  bool ok = (stop_laser() && disconnect_laser());
+  if (ok){
+    RCLCPP_INFO(get_logger(), "[YDLIDAR] Stop and Disconnect ended successfuly!");
+  }else{
+    RCLCPP_WARN(get_logger(), "[YDLIDAR] Stop and Disconnect ended with issues!");
+    return false;
+  }
+  running_ = false;
+  return true;
 }
 
 // Open the serial port, query device health/info, then start scanning.
@@ -408,23 +436,51 @@ void disconnect_laser()
 // turnOn() dereferences lidarPtr directly — initialize() must succeed first.
 bool connect_and_start_laser()
 {
-  return connect_laser() && start_laser();
+  RCLCPP_INFO(get_logger(), "[YDLIDAR] Start Connect and Start Laser");
+  bool ok = (connect_laser() && start_laser());
+  if (ok){
+    RCLCPP_INFO(get_logger(), "[YDLIDAR] Connect and Start Laser ended successfuly!");
+  }else{
+    RCLCPP_WARN(get_logger(), "[YDLIDAR] Connect and Start Laser ended with issues!");
+    return false;
+  }
+  running_ = true;
+  return true;
 }
 
 // Turn Off and Turn On the laser (soft reset)
 bool restart_scan()
 {
-  laser_.turnOff();
+  RCLCPP_INFO(get_logger(), "[YDLIDAR] Start Scan Restart");
+  stop_laser();
   std::this_thread::sleep_for(std::chrono::milliseconds(RESET_DELAY_MS));
-  return laser_.turnOn();
+  bool ok = start_laser();
+  if (ok) {
+    RCLCPP_INFO(get_logger(), "[YDLIDAR] Scan Restart ended successfully!");
+  } else {
+    RCLCPP_WARN(get_logger(), "[YDLIDAR] Scan Restart ended with issues!");
+    return false;
   }
+  running_ = true;
+  return true;
+}
 
 // Turn Off laser -> disconnect and close the port -> connect to the laser -> start the laser (hard reset) 
 bool reset_laser()
 {
-  disconnect_laser();
+  RCLCPP_INFO(get_logger(), "[YDLIDAR] Start Reset");
+  stop_and_disconnect_laser();
   std::this_thread::sleep_for(std::chrono::milliseconds(RESET_DELAY_MS));
-  return connect_and_start_laser();
+  bool ok = connect_and_start_laser();
+  if (ok){
+    RCLCPP_INFO(get_logger(), "[YDLIDAR] Reset ended successfuly!");
+  }else{
+    RCLCPP_WARN(get_logger(), "[YDLIDAR] Reset ended with issues!");
+    return false;
+  }
+  
+  running_ = true;
+  return true;
   }
 
 
@@ -448,7 +504,7 @@ void create_services()
       const std::shared_ptr<std_srvs::srv::Trigger::Request> /*request*/,
       std::shared_ptr<std_srvs::srv::Trigger::Response> response)
       {
-        if (laser_.turnOff()){
+        if (stop_laser()){
           response->success = true;
           response->message = "Scan stop";
         } else {
@@ -510,36 +566,36 @@ void create_services()
 void scan_loop()
 {
   int restart_counter = 0;
-  while (running_ && rclcpp::ok()) {
-    LaserScan scan;
 
-    if (restart_counter > ERRORS_BEFORE_REBOOT){
-      reset_laser();
-    }
+  while (running_ && laser_.isScanning() && rclcpp::ok()) {
+    LaserScan scan;
 
     if (!laser_.doProcessSimple(scan)) {
       RCLCPP_WARN(get_logger(),
-      "[YDLIDAR] Scan failed (driver error: %d, scanning: %s)",
-      static_cast<int>(laser_.getDriverError()),
-      laser_.isScanning() ? "yes" : "no");
-      restart_counter += 1;
+        "[YDLIDAR] Scan failed (driver error: %d, scanning: %s)",
+        static_cast<int>(laser_.getDriverError()),
+        laser_.isScanning() ? "yes" : "no");
+      restart_counter++;
+      std::this_thread::sleep_for(std::chrono::milliseconds(100));
       continue;
-    }else{
-      restart_counter = 0;
     }
+
+    restart_counter = 0;
 
     std::string frame_id;
     bool invalid_range_is_inf;
     {
-        std::lock_guard<std::mutex> lock(param_mutex_);
-        frame_id             = lidar_param_.frame_id;
-        invalid_range_is_inf = lidar_param_.invalid_range_is_inf;
+      std::lock_guard<std::mutex> lock(param_mutex_);
+      frame_id             = lidar_param_.frame_id;
+      invalid_range_is_inf = lidar_param_.invalid_range_is_inf;
     }
 
     auto stamp = make_stamp(scan.stamp);
     laser_pub_->publish(make_laser_scan(scan, stamp, frame_id, invalid_range_is_inf));
     pc_pub_->publish(make_point_cloud(scan, stamp, frame_id));
-    }
+  }
+
+  RCLCPP_INFO(get_logger(), "[YDLIDAR] Scan loop exited (restart_counter: %d)", restart_counter);
 }
 
 
