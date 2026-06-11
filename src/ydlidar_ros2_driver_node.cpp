@@ -1,4 +1,4 @@
-/*
+﻿/*
  *  YDLIDAR SYSTEM
  *  YDLIDAR ROS 2 Node
  *
@@ -628,9 +628,9 @@ void scan_loop()
 {
   int restart_counter = 0;
   int consecutive_failures = 0;
-
+ 
   while (rclcpp::ok()) {
-
+ 
     {
       std::lock_guard<std::mutex> lock(scan_mutex_);
       if (!running_ || !laser_.isScanning()) {
@@ -640,9 +640,9 @@ void scan_loop()
         break;  // Exit the loop cleanly
       }
     }
-
+ 
     LaserScan scan;
-
+ 
     if (!laser_.doProcessSimple(scan)) {
       consecutive_failures++;
       RCLCPP_WARN(get_logger(),
@@ -651,9 +651,9 @@ void scan_loop()
         static_cast<int>(laser_.getDriverError()),
         laser_.DescribeError(),
         laser_.isScanning() ? "yes" : "no");
-
+ 
       restart_counter++;
-
+ 
       {
         std::lock_guard<std::mutex> lock(scan_mutex_);
         if (!running_) {
@@ -662,14 +662,14 @@ void scan_loop()
           break;
         }
       }
-
+ 
       std::this_thread::sleep_for(std::chrono::milliseconds(100));
       continue;
     }
-
+ 
     consecutive_failures = 0;
     restart_counter = 0;
-
+ 
     std::string frame_id;
     bool invalid_range_is_inf;
     {
@@ -677,15 +677,16 @@ void scan_loop()
       frame_id             = lidar_param_.frame_id;
       invalid_range_is_inf = lidar_param_.invalid_range_is_inf;
     }
-
+ 
     auto stamp = make_stamp(scan.stamp);
     laser_pub_->publish(make_laser_scan(scan, stamp, frame_id, invalid_range_is_inf));
     pc_pub_->publish(make_point_cloud(scan, stamp, frame_id));
   }
-
+ 
   RCLCPP_INFO(get_logger(), "[YDLIDAR] Scan loop exited normally (restart_counter: %d, consecutive_failures: %d)", 
               restart_counter, consecutive_failures);
 }
+
 
 
 ///////////////////////////////////////////////////////////////////////////
