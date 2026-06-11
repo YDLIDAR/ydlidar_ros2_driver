@@ -100,16 +100,45 @@ YDLidarNode() : Node("ydlidar_ros2_driver_node")
 
 ~YDLidarNode()
 {
+  // Signal the scan thread to stop
   {
     std::lock_guard<std::mutex> lock(scan_mutex_);
     running_ = false;
   }
   scan_cv_.notify_all();
+ 
+  // Wait for scan thread to exit with timeout (don't block forever on stuck I/O)
   if (scan_thread_.joinable()) {
-    scan_thread_.join();
+    auto timeout = std::chrono::milliseconds(2000);  // 2 second timeout
+    auto start = std::chrono::steady_clock::now();
+    
+    // Busy-wait with small sleep intervals to allow the thread to exit
+    while (scan_thread_.joinable()) {
+      std::this_thread::sleep_for(std::chrono::milliseconds(50));
+      if (std::chrono::steady_clock::now() - start > timeout) {
+        RCLCPP_ERROR(get_logger(), "[YDLIDAR] Scan thread did not exit within timeout (likely stuck in SDK call)");
+        break;  // Give up gracefully, don't deadlock
+      }
+    }
+    
+    // Only join if thread is still joinable
+    if (scan_thread_.joinable()) {
+      try {
+        scan_thread_.join();
+      } catch (const std::system_error &e) {
+        RCLCPP_ERROR(get_logger(), "[YDLIDAR] system_error joining scan thread: %s", e.what());
+      } catch (const std::exception &e) {
+        RCLCPP_ERROR(get_logger(), "[YDLIDAR] Exception joining scan thread: %s", e.what());
+      }
+    }
   }
-  stop_laser();
-  disconnect_laser();
+  
+  try {
+    laser_.turnOff();
+    laser_.disconnecting();
+  } catch (const std::exception &e) {
+    RCLCPP_ERROR(get_logger(), "[YDLIDAR] Exception during laser shutdown: %s", e.what());
+  }
 }
 
 private:
