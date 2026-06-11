@@ -1,6 +1,6 @@
 ydlidar_ros2_driver_node:
   ros__parameters:
-    port: /dev/ttyUSB0
+    port: /dev/serial/by-id/usb-Silicon_Labs_CP2102_USB_to_UART_Bridge_Controller_0001-if00-port0
     frame_id: laser_frame
     ignore_array: ""
     baudrate: 230400
