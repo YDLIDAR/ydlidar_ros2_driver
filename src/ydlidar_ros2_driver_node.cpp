@@ -17,7 +17,12 @@
 #include <math.h>
 #include <chrono>
 #include <limits>
+#include <limits>
 #include <memory>
+#include <mutex>
+#include <stdexcept>
+#include <string>
+#include <thread>
 #include <mutex>
 #include <stdexcept>
 #include <string>
@@ -28,8 +33,13 @@
 #include <sensor_msgs/msg/point_cloud2.hpp>
 #include <sensor_msgs/point_cloud2_iterator.hpp>
 #include <std_srvs/srv/trigger.hpp>
+#include <rclcpp/rclcpp.hpp>
+#include <sensor_msgs/msg/laser_scan.hpp>
+#include <sensor_msgs/msg/point_cloud2.hpp>
+#include <sensor_msgs/point_cloud2_iterator.hpp>
+#include <std_srvs/srv/trigger.hpp>
 
-#define ROS2_DRIVER_VERSION "1.0.2"
+#define ROS2_DRIVER_VERSION "1.0.3"
 
 static constexpr int INIT_RETRIES   = 3;
 static constexpr int ERRORS_BEFORE_REBOOT  = 4;
@@ -84,13 +94,14 @@ YDLidarNode() : Node("ydlidar_ros2_driver_node")
 
   std::this_thread::sleep_for(std::chrono::milliseconds(BOOT_DELAY_MS));
 
+  create_publishers();
+  create_services();
+
   if (!connect_and_start_laser()) {
     throw std::runtime_error("Failed to Initialize laser!");
   }
 
   sync_lidar_properties(lidar_param_);
-  create_publishers();
-  create_services();
 
   param_cb_handle_ = this->add_on_set_parameters_callback(
     std::bind(&YDLidarNode::on_param_change, this, std::placeholders::_1));
@@ -617,12 +628,16 @@ void create_services()
 void scan_loop()
 {
   int restart_counter = 0;
+  int consecutive_failures = 0;
 
   while (rclcpp::ok()) {
 
     {
       std::lock_guard<std::mutex> lock(scan_mutex_);
       if (!running_ || !laser_.isScanning()) {
+        RCLCPP_INFO(get_logger(), "[YDLIDAR] Scan loop exiting: running=%s, isScanning=%s",
+                    running_ ? "true" : "false", 
+                    laser_.isScanning() ? "true" : "false");
         break;  // Exit the loop cleanly
       }
     }
@@ -630,9 +645,12 @@ void scan_loop()
     LaserScan scan;
 
     if (!laser_.doProcessSimple(scan)) {
+      consecutive_failures++;
       RCLCPP_WARN(get_logger(),
-        "[YDLIDAR] Scan failed (driver error: %d, scanning: %s)",
+        "[YDLIDAR] Scan failed #%d (driver error: %d (%s), scanning: %s)",
+        consecutive_failures,
         static_cast<int>(laser_.getDriverError()),
+        laser_.DescribeError(),
         laser_.isScanning() ? "yes" : "no");
 
       restart_counter++;
@@ -640,7 +658,8 @@ void scan_loop()
       {
         std::lock_guard<std::mutex> lock(scan_mutex_);
         if (!running_) {
-          RCLCPP_INFO(get_logger(), "[YDLIDAR] Scan loop received stop signal during error recovery");
+          RCLCPP_INFO(get_logger(), "[YDLIDAR] Scan loop received stop signal after %d failures",
+                      consecutive_failures);
           break;
         }
       }
@@ -649,6 +668,7 @@ void scan_loop()
       continue;
     }
 
+    consecutive_failures = 0;
     restart_counter = 0;
 
     std::string frame_id;
@@ -664,7 +684,8 @@ void scan_loop()
     pc_pub_->publish(make_point_cloud(scan, stamp, frame_id));
   }
 
-  RCLCPP_INFO(get_logger(), "[YDLIDAR] Scan loop exited (restart_counter: %d)", restart_counter);
+  RCLCPP_INFO(get_logger(), "[YDLIDAR] Scan loop exited normally (restart_counter: %d, consecutive_failures: %d)", 
+              restart_counter, consecutive_failures);
 }
 
 
