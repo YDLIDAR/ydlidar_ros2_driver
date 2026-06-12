@@ -94,13 +94,14 @@ YDLidarNode() : Node("ydlidar_ros2_driver_node")
 
   std::this_thread::sleep_for(std::chrono::milliseconds(BOOT_DELAY_MS));
 
+  create_publishers();
+  create_services();
+
   if (!connect_and_start_laser()) {
     throw std::runtime_error("Failed to Initialize laser!");
   }
 
   sync_lidar_properties(lidar_param_);
-  create_publishers();
-  create_services();
 
   param_cb_handle_ = this->add_on_set_parameters_callback(
     std::bind(&YDLidarNode::on_param_change, this, std::placeholders::_1));
@@ -628,7 +629,6 @@ void scan_loop()
 {
   int restart_counter = 0;
   int consecutive_failures = 0;
- 
   while (rclcpp::ok()) {
  
     {
@@ -666,7 +666,6 @@ void scan_loop()
       std::this_thread::sleep_for(std::chrono::milliseconds(100));
       continue;
     }
- 
     consecutive_failures = 0;
     restart_counter = 0;
  
@@ -682,12 +681,9 @@ void scan_loop()
     laser_pub_->publish(make_laser_scan(scan, stamp, frame_id, invalid_range_is_inf));
     pc_pub_->publish(make_point_cloud(scan, stamp, frame_id));
   }
- 
   RCLCPP_INFO(get_logger(), "[YDLIDAR] Scan loop exited normally (restart_counter: %d, consecutive_failures: %d)", 
               restart_counter, consecutive_failures);
 }
-
-
 
 ///////////////////////////////////////////////////////////////////////////
 // Message builders
