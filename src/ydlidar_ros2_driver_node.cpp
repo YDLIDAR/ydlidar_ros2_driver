@@ -99,6 +99,9 @@ YDLidarNode() : Node("ydlidar_ros2_driver_node")
   create_publishers();
   create_services();
 
+  create_publishers();
+  create_services();
+
   if (!connect_and_start_laser()) {
     throw std::runtime_error("Failed to Initialize laser!");
   }
@@ -653,6 +656,7 @@ void scan_loop()
  
   while (rclcpp::ok()) {
  
+ 
     {
       std::lock_guard<std::mutex> lock(scan_mutex_);
       if (!running_ || !laser_.isScanning()) {
@@ -663,20 +667,28 @@ void scan_loop()
       }
     }
  
+ 
     LaserScan scan;
  
+ 
     if (!laser_.doProcessSimple(scan)) {
+      consecutive_failures++;
       consecutive_failures++;
       RCLCPP_WARN(get_logger(),
         "[YDLIDAR] Scan failed #%d (driver error: %d (%s), scanning: %s)",
         consecutive_failures,
+        "[YDLIDAR] Scan failed #%d (driver error: %d (%s), scanning: %s)",
+        consecutive_failures,
         static_cast<int>(laser_.getDriverError()),
+        laser_.DescribeError(),
         laser_.DescribeError(),
         laser_.isScanning() ? "yes" : "no");
  
       {
         std::lock_guard<std::mutex> lock(scan_mutex_);
         if (!running_) {
+          RCLCPP_INFO(get_logger(), "[YDLIDAR] Scan loop received stop signal after %d failures",
+                      consecutive_failures);
           RCLCPP_INFO(get_logger(), "[YDLIDAR] Scan loop received stop signal after %d failures",
                       consecutive_failures);
           break;
@@ -711,7 +723,7 @@ void scan_loop()
       frame_id             = lidar_param_.frame_id;
       invalid_range_is_inf = lidar_param_.invalid_range_is_inf;
     }
-
+ 
     auto stamp = make_stamp(scan.stamp);
     laser_pub_->publish(make_laser_scan(scan, stamp, frame_id, invalid_range_is_inf));
     pc_pub_->publish(make_point_cloud(scan, stamp, frame_id));
