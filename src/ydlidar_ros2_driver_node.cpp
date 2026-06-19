@@ -99,9 +99,6 @@ YDLidarNode() : Node("ydlidar_ros2_driver_node")
   create_publishers();
   create_services();
 
-  create_publishers();
-  create_services();
-
   if (!connect_and_start_laser()) {
     throw std::runtime_error("Failed to Initialize laser!");
   }
