@@ -67,6 +67,7 @@ int main(int argc, char *argv[]) {
   node->declare_parameter("lidar_type", optval);
   node->get_parameter("lidar_type", optval);
   laser.setlidaropt(LidarPropLidarType, &optval, sizeof(int));
+  int LidarType = optval;
   /// device type
   optval = YDLIDAR_TYPE_SERIAL;
   node->declare_parameter("device_type", optval);
@@ -163,25 +164,29 @@ int main(int argc, char *argv[]) {
   bool ret = laser.initialize();
   if (ret) 
   {
-    //设置GS工作模式（非GS雷达请无视该代码）
-    int i_v = 0;
-    node->declare_parameter("m1_mode", i_v);
-    node->get_parameter("m1_mode", i_v);
-    laser.setWorkMode(i_v, 0x01);
-    i_v = 0;
-    node->declare_parameter("m2_mode", i_v);
-    node->get_parameter("m2_mode", i_v);
-    laser.setWorkMode(i_v, 0x02);
-    i_v = 1;
-    node->declare_parameter("m3_mode", i_v);
-    node->get_parameter("m3_mode", i_v);
-    laser.setWorkMode(i_v, 0x04);
+    if (TYPE_GS == LidarType)
+    {
+      //设置GS工作模式（非GS雷达请无视该代码）
+      int i_v = 0;
+      node->declare_parameter("m1_mode", i_v);
+      node->get_parameter("m1_mode", i_v);
+      laser.setWorkMode(i_v, 0x01);
+      i_v = 0;
+      node->declare_parameter("m2_mode", i_v);
+      node->get_parameter("m2_mode", i_v);
+      laser.setWorkMode(i_v, 0x02);
+      i_v = 1;
+      node->declare_parameter("m3_mode", i_v);
+      node->get_parameter("m3_mode", i_v);
+      laser.setWorkMode(i_v, 0x04);
+    }
     //启动扫描
     ret = laser.turnOn();
   } 
   else 
   {
     RCLCPP_ERROR(node->get_logger(), "%s\n", laser.DescribeError());
+    return -1;
   }
   
   auto laser_pub = node->create_publisher<sensor_msgs::msg::LaserScan>("scan", rclcpp::SensorDataQoS());
@@ -230,7 +235,7 @@ int main(int argc, char *argv[]) {
       scan_msg->range_min = scan.config.min_range;
       scan_msg->range_max = scan.config.max_range;
       
-      int size = (scan.config.max_angle - scan.config.min_angle)/ scan.config.angle_increment + 1;
+      int size = (scan.config.max_angle - scan.config.min_angle) / scan.config.angle_increment + 1;
       scan_msg->ranges.resize(size);
       scan_msg->intensities.resize(size);
 
@@ -240,46 +245,52 @@ int main(int argc, char *argv[]) {
       int idx_timestamp = 1;
       pc_msg->channels[idx_timestamp].name = "stamps";
 
-      for(size_t i=0; i < scan.points.size(); i++) {
-        int index = std::ceil((scan.points[i].angle - scan.config.min_angle)/scan.config.angle_increment);
-        if(index >=0 && index < size) {
-	  if (scan.points[i].range >= scan.config.min_range) {
-            scan_msg->ranges[index] = scan.points[i].range;
-            scan_msg->intensities[index] = scan.points[i].intensity;
-	  }
+      //printf("Point count %lu\n", scan.points.size());
+      for (size_t i=0; i < scan.points.size(); i++)
+      {
+        const auto& p = scan.points.at(i);
+        if (p.range < scan.config.min_range ||
+            p.range > scan.config.max_range) 
+            continue;
+        int index = std::ceil((p.angle - scan.config.min_angle) / scan.config.angle_increment);
+        if (index >= 0 && index < size)
+        {
+          scan_msg->ranges[index] = p.range;
+          scan_msg->intensities[index] = p.intensity;
+          //printf("Valid i:%lu index:%d angle:%.02f° range:%.03fm intensity:%.0f\n",
+          //  i, index, p.angle*180.0/M_PI, p.range, p.intensity);
+        }
+        else
+        {
+          //printf("Invalid i:%lu index:%d angle:%.02f° range:%.03fm intensity:%.0f\n",
+          //  i, index, p.angle*180.0/M_PI, p.range, p.intensity);
         }
 
-	if (scan.points[i].range >= scan.config.min_range &&
-             scan.points[i].range <= scan.config.max_range) {
-          geometry_msgs::msg::Point32 point;
-          point.x = scan.points[i].range * cos(scan.points[i].angle);
-          point.y = scan.points[i].range * sin(scan.points[i].angle);
-          point.z = 0.0;
-          pc_msg->points.push_back(point);
-          pc_msg->channels[idx_intensity].values.push_back(scan.points[i].intensity);
-          pc_msg->channels[idx_timestamp].values.push_back(i * scan.config.time_increment);
-        }
-
+        geometry_msgs::msg::Point32 point;
+        point.x = scan.points[i].range * cos(scan.points[i].angle);
+        point.y = scan.points[i].range * sin(scan.points[i].angle);
+        point.z = 0.0;
+        pc_msg->points.push_back(point);
+        pc_msg->channels[idx_intensity].values.push_back(scan.points[i].intensity);
+        pc_msg->channels[idx_timestamp].values.push_back(i * scan.config.time_increment);
       }
 
       laser_pub->publish(*scan_msg);
       pc_pub->publish(*pc_msg);
 
     } else {
-      RCLCPP_ERROR(node->get_logger(), "Failed to get scan");
+      RCLCPP_ERROR(node->get_logger(), "[YDLIDAR] Failed to get scan data");
     }
-    if(!rclcpp::ok()) {
+    if (!rclcpp::ok()) {
       break;
     }
     rclcpp::spin_some(node);
     loop_rate.sleep();
   }
 
-
-  RCLCPP_INFO(node->get_logger(), "[YDLIDAR INFO] Now YDLIDAR is stopping .......");
+  RCLCPP_INFO(node->get_logger(), "[YDLIDAR] Now YDLIDAR is stopping...");
   laser.turnOff();
   laser.disconnecting();
   rclcpp::shutdown();
-
   return 0;
 }
